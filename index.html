@@ -94,8 +94,8 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
   background:rgba(253,250,241,.94);
   transition:opacity .5s;
   width:100%; max-width:400px;
-  min-height:38px; display:flex; align-items:center; justify-content:center;
-  padding:6px 12px; font-size:12.5px; font-weight:700; text-align:center; line-height:1.4;
+  min-height:30px; display:flex; align-items:center; justify-content:center;
+  padding:4px 10px; font-size:12px; font-weight:700; text-align:center; line-height:1.35;
 }
 #msg.bad{color:var(--bad);}
 #msg.warn{color:var(--warn);}
@@ -110,21 +110,26 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 /* 下部の操作バンド */
 #ovBot{
   position:absolute; left:6px; right:6px; bottom:6px;
-  display:flex; flex-direction:column; gap:5px; align-items:center;
+  display:flex; flex-direction:column; gap:4px; align-items:center;
 }
-#board{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:6px; width:100%; max-width:430px;}
+#board{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:5px; width:100%; max-width:430px;}
+#board.solo{display:flex; justify-content:center;}
 #board:empty{display:none;}
 .pl{
   background:rgba(253,250,241,.93);
   padding:4px 5px 5px; text-align:center; position:relative; min-width:0;
 }
+.pl.solo{display:flex; align-items:center; gap:9px; padding:3px 14px 4px; width:auto;}
+.pl.solo .sc{font-size:19px;}
+.pl.solo .rm{font-size:10px;}
+.pl.solo .ms{margin-top:0;}
 .pl.active{border-color:var(--pc); border-width:3px; background:#fff;}
 .pl.out{opacity:.42;}
 .pl.win{border-color:var(--gold); border-width:3px;}
 .pl .nm{font-size:10.5px; font-weight:700; color:var(--sub); display:flex; align-items:center; justify-content:center; gap:4px; overflow:hidden; white-space:nowrap;}
 .pl .nm .dot{width:7px; height:7px; border-radius:50%; background:var(--pc); flex:none;}
 .pl .sc{
-  font-family:var(--fh); font-weight:400; font-size:22px; line-height:1.05;
+  font-family:var(--fh); font-weight:400; font-size:18px; line-height:1.05;
   color:var(--ink);
 }
 .pl .sc.bump{animation:bump .5s ease;}
@@ -155,14 +160,14 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 .seg{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:4px; flex:1;}
 .seg button{
   background:rgba(253,250,241,.93); color:var(--ink); font-family:var(--fh); font-weight:400;
-  padding:6px 2px; font-size:11.5px; cursor:pointer;
+  padding:4px 2px; font-size:11px; cursor:pointer;
 }
 .seg button.sel{background:var(--red); color:#fff; border-color:var(--red-dark);}
 .seg button:focus-visible{outline:2px solid var(--ink); outline-offset:2px;}
 #btnRow{display:flex; gap:8px; align-items:stretch; width:100%; max-width:430px; justify-content:center;}
 #btnGo{
-  flex:1; padding:10px 14px;
-  background:var(--p1); color:#fff; font-size:14.5px; font-family:var(--fh); font-weight:400;
+  flex:1; padding:7px 12px;
+  background:var(--p1); color:#fff; font-size:14px; font-family:var(--fh); font-weight:400;
   letter-spacing:.06em; cursor:pointer;
   border:2.5px solid var(--ink);
   border-radius:255px 15px 225px 15px / 15px 225px 15px 255px;
@@ -172,8 +177,8 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 #btnGo:active{transform:translateY(2px); box-shadow:0 1px 0 rgba(74,59,42,.35);}
 #btnGo:disabled{background:#c9c0ae !important; color:#f4efe2; cursor:default;}
 #hint{
-  min-height:14px; font-size:11px; color:#fff; text-align:center; font-weight:700;
-  line-height:1.4; padding:0 6px; text-shadow:0 1px 2px rgba(20,30,20,.8);
+  min-height:13px; font-size:10.5px; color:#fff; text-align:center; font-weight:700;
+  line-height:1.35; padding:0 6px; text-shadow:0 1px 2px rgba(20,30,20,.8);
   max-width:430px;
 }
 
@@ -745,7 +750,7 @@ function viewTopNeed(){
   let vt=6.4;
   for(const p of pins) vt=Math.max(vt,p.y+1.3);
   if(stick&&(state==='fly'||state==='roll')) vt=Math.max(vt,stick.y+0.6);
-  if(state==='aimDir'||state==='sweep'||state==='pendulum'){
+  if(state==='pendulum'&&assistFull()){
     vt=Math.max(vt, LAUNCH.y+throwTop+0.35);
   }
   return Math.min(vt, C.H);
@@ -776,6 +781,7 @@ function resize(){
   scale=t.sc; camY=t.cy;
 }
 const X=x=>cw/2+x*scale, Y=y=>ch-(y-camY)*scale, S=m=>m*scale;
+const PV=()=>clamp(6.5/Math.max(0.001,S(PIN_R)),PIN_VIS,2.4);
 function toWorld(e){
   const r=cv.getBoundingClientRect();
   return {x:(e.clientX-r.left-cw/2)/scale, y:(ch-(e.clientY-r.top))/scale+camY};
@@ -1116,7 +1122,7 @@ function relax(){
       const A=pins[i],B=pins[j];
       const dx=B.x-A.x, dy=B.y-A.y;
       let dd=Math.hypot(dx,dy);
-      const rr=PIN_R*2*PIN_VIS+0.008;
+      const rr=PIN_R*2*Math.min(PV(),1.55)+0.008;
       if(dd<1e-5){ B.x+=0.01; dd=0.01; }
       if(dd<rr){
         const nx=dx/dd, ny=dy/dd, ov=(rr-dd)/2;
@@ -1317,10 +1323,12 @@ function fillFinals(){
 let prevScores=[];
 function renderBoard(){
   elBoard.innerHTML='';
+  const soloUi=players.length===1&&!players[0].team;
+  elBoard.classList.toggle('solo',soloUi);
   const playing=['aimDir','sweep','pendulum','fly','roll','result','ending'].includes(state);
   players.forEach((p,i)=>{
     const d=document.createElement('div');
-    d.className='pl '+(i%2?'hand2':'hand')+(i===cur&&!p.out&&playing?' active':'')
+    d.className='pl '+(i%2?'hand2':'hand')+(soloUi?' solo':'')+(i===cur&&!p.out&&playing?' active':'')
       +(p.out?' out':'')+(state==='win'&&p.score===50?' win':'');
     d.style.setProperty('--pc',p.col);
     if(i===cur&&!p.out&&playing) d.style.borderColor=p.hex;
@@ -1634,7 +1642,7 @@ function drawField(){
   ctx.beginPath(); ctx.moveTo(0,Y(LINE_Y)); ctx.lineTo(cw,Y(LINE_Y)); ctx.stroke();
   ctx.setLineDash([]);
   ctx.textAlign='left'; ctx.textBaseline='middle';
-  ctx.font='400 '+Math.max(9,Math.min(12,S(0.13)))+'px '+FONT_H;
+  ctx.font='400 '+Math.max(10,Math.min(12.5,S(0.13)))+'px '+FONT_H;
   const lx=Math.max(4,X(-C.CX)+6);
   const mMax=Math.min(Math.floor(camY+ch/scale-LINE_Y), Math.floor(C.BACK-LINE_Y+0.01));
   for(let k=1;k<=mMax;k++){
@@ -1688,7 +1696,7 @@ function drawTrail(){
 function drawStandingPin(p){
   const cx=X(p.x), cy=Y(p.y);
   const sc=p.stand<1?Math.max(0.35,easeOutBack(p.stand)):1;
-  const r=S(PIN_R)*PIN_VIS*sc;
+  const r=S(PIN_R)*PV()*sc;
   const tilt=p.wob>0?Math.sin(p.wob*32)*0.14*p.wob:0;
   if(goldPin===p.n && ['aimDir','sweep','pendulum'].includes(state)){
     ctx.strokeStyle='#ffd23f'; ctx.lineWidth=2.5;
@@ -1710,7 +1718,7 @@ function drawStandingPin(p){
     ctx.beginPath(); ctx.arc(0,0,r*0.72,0,6.2832); ctx.stroke();
   }
   ctx.fillStyle='#4a3620';
-  ctx.font='400 '+Math.max(8,r*1.1)+'px '+FONT_H;
+  ctx.font='400 '+Math.max(9.5,r*1.15)+'px '+FONT_H;
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(p.n,0,r*0.05);
   ctx.restore();
@@ -1718,7 +1726,7 @@ function drawStandingPin(p){
 function drawLyingPin(p){
   const cx=X(p.x), cy=Y(p.y);
   const popk=p.pop>0?1+1.1*(p.pop/0.22):1;
-  const L=S(0.24)*PIN_VIS*popk, Wd=S(0.12)*PIN_VIS*popk;
+  const L=S(0.24)*PV()*popk, Wd=S(0.12)*PV()*popk;
   const spin=p.pop>0?Math.sin(p.pop*40)*0.25:0;
   ctx.save();
   ctx.translate(cx,cy); ctx.rotate(-p.lie+spin);
@@ -1734,7 +1742,7 @@ function drawLyingPin(p){
   ctx.strokeStyle='#a98a55'; ctx.lineWidth=1; ctx.stroke();
   ctx.restore();
   ctx.fillStyle='#4a3620';
-  ctx.font='400 '+Math.max(7,S(0.075)*PIN_VIS)+'px '+FONT_H;
+  ctx.font='400 '+Math.max(9,S(0.075)*PV())+'px '+FONT_H;
   ctx.textAlign='center'; ctx.textBaseline='middle';
   const hx=cx+Math.cos(-p.lie+spin)*(L/2-Wd/2), hy=cy+Math.sin(-p.lie+spin)*(L/2-Wd/2);
   ctx.fillText(p.n,hx,hy);
@@ -1761,11 +1769,11 @@ function drawStick(){
   const h=stick.phase==='air'?stick.h:0;
   const hn=stick.hMax>0?h/stick.hMax:0;
   ctx.fillStyle='rgba(0,0,0,'+(0.28-0.16*hn)+')';
-  ctx.beginPath(); ctx.ellipse(gx,gy,S(0.11)*PIN_VIS,S(0.055)*PIN_VIS,0,0,6.2832); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(gx,gy,S(0.11)*PV(),S(0.055)*PV(),0,0,6.2832); ctx.fill();
   ctx.save();
   ctx.translate(gx,gy-S(h*0.8));
   ctx.rotate(-stick.rot);
-  const z=(1+h*0.3)*PIN_VIS;
+  const z=(1+h*0.3)*PV();
   ctx.scale(z,z);
   drawStickShape(S(0.25),S(0.068));
   ctx.restore();
@@ -1774,7 +1782,7 @@ function drawIdleStick(){
   const gx=X(LAUNCH.x), gy=Y(LAUNCH.y-0.02);
   ctx.save();
   ctx.translate(gx,gy); ctx.rotate(-0.35);
-  ctx.scale(PIN_VIS,PIN_VIS);
+  const pv=PV(); ctx.scale(pv,pv);
   drawStickShape(S(0.22),S(0.06));
   ctx.restore();
 }
@@ -1845,7 +1853,7 @@ function drawPowerMarker(dist,live){
   if(backFlash>0) col='#e88a6a';
   ctx.fillStyle=over?'rgba(224,85,69,0.3)':(ok?'rgba(143,193,242,0.25)':'rgba(255,255,255,0.1)');
   ctx.strokeStyle=col; ctx.lineWidth=2.5;
-  const pr=Math.max(8,S(0.075)*PIN_VIS)+(live&&ok?2*Math.sin(tGlobal*9):0);
+  const pr=Math.max(8,S(0.075)*PV())+(live&&ok?2*Math.sin(tGlobal*9):0);
   ctx.beginPath(); ctx.arc(mx,my,pr,0,6.2832); ctx.fill(); ctx.stroke();
   ctx.save();
   ctx.translate(mx,my);
@@ -1919,11 +1927,11 @@ function drawPendulum(){
   ctx.lineCap='butt';
   const gx=X(px), gy=Y(py);
   ctx.fillStyle='rgba(0,0,0,'+(0.28-0.1*(h/0.13))+')';
-  ctx.beginPath(); ctx.ellipse(gx,gy,S(0.1)*PIN_VIS,S(0.05)*PIN_VIS,0,0,6.2832); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(gx,gy,S(0.1)*PV(),S(0.05)*PV(),0,0,6.2832); ctx.fill();
   ctx.save();
   ctx.translate(gx,gy-S(h*0.8));
   ctx.rotate(-(opts.grip==='tate'?dirLocked:dirLocked+Math.PI/2));
-  const z=(1+h*0.4)*PIN_VIS;
+  const z=(1+h*0.4)*PV();
   ctx.scale(z,z);
   drawStickShape(S(0.23),S(0.064));
   ctx.restore();
@@ -1962,11 +1970,11 @@ function draw(){
       ctx.save();
       ctx.translate(X(q.x),Y(q.y));
       ctx.rotate(q.rot);
-      const r=S(q.r)*PIN_VIS;
+      const r=S(q.r)*PV();
       ctx.fillRect(-r,-r*0.55,r*2,r*1.1);
       ctx.restore();
     }else{
-      ctx.beginPath(); ctx.arc(X(q.x),Y(q.y),S(q.r)*PIN_VIS,0,6.2832); ctx.fill();
+      ctx.beginPath(); ctx.arc(X(q.x),Y(q.y),S(q.r)*PV(),0,6.2832); ctx.fill();
     }
   }
   ctx.globalAlpha=1;
