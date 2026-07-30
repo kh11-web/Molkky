@@ -410,7 +410,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
       </ol>
       <p>矢印スタート後は、画面のどこをタップしても反応します。ボタンまでポインタを戻す必要はありません。</p>
       <p>ねらいのガイド線は手前数mで薄れて消えます。実物と同じで、その先の延長線はイメージで狙ってください。やさしいほどガイドが長く伸びます。</p>
-      <p>通信対戦は、部屋を作った人が4文字のコードを相手に伝え、相手がそのコードで入室すると2人で遊べます。部屋主が先攻で、コートと難易度は部屋主の設定が使われます。再戦の合図も部屋主が出します。</p>
+      <p>通信対戦は、部屋を作った人が4文字のコードを伝え、最大4人まで入室できます。部屋主は人数がそろったところで個人戦として開始でき、4人ちょうどのときは2対2のチーム戦も選べます。組分けは入室順に青2人、オレンジ2人。投げる順は入室順で、コートと難易度は部屋主の設定が使われます。途中で回線が切れた人は失格あつかいになり、残りのメンバーで続行します。再戦の合図は部屋主が出します。</p>
       <p>振り子の振り幅は、いちばん遠いピンの少し先まで自動で伸び縮みします。ピンが奥に流れるほど振り幅が広がってマーカーが速くなり、さらに飛距離が伸びるほど着地位置のばらつきも大きくなります。実物と同じで、8mを超える遠投は狙いどおりに落とすだけでも難しくなります。近い距離はゆっくりで合わせやすいままです。</p>
       <h3>弾道と投げ技（実際の技術に対応）</h3>
       <table class="tec">
@@ -493,7 +493,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
       <button class="hand2" data-v="hard">むずかしい</button>
     </div>
     <button class="bigbtn" id="btnStart">ゲームスタート</button>
-    <button class="subbtn" id="btnNet">通信対戦（部屋コードで2人）</button>
+    <button class="subbtn" id="btnNet">通信対戦（部屋コードで2〜4人）</button>
   </div>
 </div>
 
@@ -511,7 +511,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 
 <div class="ov" id="ovNet" hidden>
   <div class="card">
-    <h2><b>通信対戦</b>部屋コードで2人</h2>
+    <h2><b>通信対戦</b>部屋コードで2〜4人</h2>
     <p class="lead" id="netStatus"></p>
     <div id="netEntry">
       <div><span class="optlabel">なまえ</span></div>
@@ -527,6 +527,8 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
       <div id="netCodeBig" class="hand"></div>
       <div class="finals" id="netRoster"></div>
       <button class="bigbtn" id="btnNetStart" style="display:none" disabled>相手の入室待ち…</button>
+      <button class="bigbtn" id="btnNetStartTeam" style="display:none" disabled>チーム戦で開始（2対2）</button>
+      <p class="lead" id="netTeamNote" style="display:none">チーム戦の組分けは入室順に 青・青・オレンジ・オレンジ です</p>
     </div>
     <button class="subbtn" id="btnNetBack">もどる</button>
   </div>
@@ -652,6 +654,14 @@ const guideLen=()=>Math.min(cfg().guide,throwValid);
 const pendDist=s=>D_MIN+(throwTop-D_MIN)*(s+1)/2;
 const pendPeriod=()=>cfg().period*Math.sqrt((throwTop-D_MIN)/4.7);
 const throwerOf=p=>p.members[p.mIdx%p.members.length];
+function throwerUidOf(p){ return p.team ? p.uids[p.mIdx%p.uids.length] : p.uid; }
+function curIsRemote(){
+  if(!Net.active) return false;
+  const p=players[cur];
+  if(!p||p.cpu) return false;
+  return throwerUidOf(p)!==Net.uid;
+}
+let lastThrowerUid=null;
 const sideLabel=p=>p.team ? p.name+'・'+throwerOf(p) : p.name;
 function paintBtn(hex){
   if(hex){ btnGo.style.background=hex; }
@@ -815,8 +825,8 @@ const NETCFG={
   appId:"1:108714827882:web:6e724ff57f74962b696a13"
 };
 const Net={
-  ready:false, uid:null, code:null, seat:-1, active:false, started:false,
-  rdSeen:0, roster:{}, hooks:{}, offs:[],
+  ready:false, uid:null, code:null, isHost:false, active:false, started:false,
+  rdSeen:0, roster:{}, hooks:{}, offs:[], mode:'kojin', ord:[], dropped:{},
   pendingIn:null, pendingOut:null, expIn:-1, expOut:-1,
   ok(){ return typeof firebase!=='undefined'&&!!firebase.initializeApp; },
   async boot(){
@@ -827,7 +837,10 @@ const Net={
       const c=await firebase.auth().signInAnonymously();
       this.uid=c.user.uid; this.ready=true; return true;
     }catch(e){
-      return (e&&e.code==='auth/operation-not-allowed')?'anon':'net';
+      const c=(e&&e.code)||'';
+      if(c==='auth/operation-not-allowed'||c==='auth/configuration-not-found'||c==='auth/admin-restricted-operation') return 'anon';
+      if(c==='auth/network-request-failed') return 'net';
+      return 'e:'+(c||(e&&e.message)||'unknown');
     }
   },
   db(path){ return firebase.database().ref(path); },
@@ -851,9 +864,9 @@ const Net={
         ca:firebase.database.ServerValue.TIMESTAMP,
         st:'lobby', host:this.uid, rd:0,
         op:{court:opts.court, diff:opts.diff},
-        p:{[this.uid]:{nm:name, seat:0}}
+        p:{[this.uid]:{nm:name, ja:firebase.database.ServerValue.TIMESTAMP}}
       });
-      this.code=c; this.seat=0; this.started=false; this.rdSeen=0;
+      this.code=c; this.isHost=true; this.started=false; this.rdSeen=0; this.dropped={};
       ref.child('p/'+this.uid).onDisconnect().remove();
       this.attach();
       return c;
@@ -867,9 +880,9 @@ const Net={
     const v=snap.val();
     if(v.st!=='lobby') throw new Error('started');
     const cnt=v.p?Object.keys(v.p).length:0;
-    if(cnt>=2&&!(v.p&&v.p[this.uid])) throw new Error('full');
-    await ref.child('p/'+this.uid).set({nm:name, seat:1});
-    this.code=code; this.seat=1; this.started=false; this.rdSeen=v.rd|0;
+    if(cnt>=4&&!(v.p&&v.p[this.uid])) throw new Error('full');
+    await ref.child('p/'+this.uid).set({nm:name, ja:firebase.database.ServerValue.TIMESTAMP});
+    this.code=code; this.isHost=false; this.started=false; this.rdSeen=v.rd|0; this.dropped={};
     ref.child('p/'+this.uid).onDisconnect().remove();
     this.attach();
   },
@@ -894,11 +907,20 @@ const Net={
   expectOut(){ const idx=totalThrows-1; this.expOut=idx; this.hookThrow(idx); },
   pushIn(idx,v){ try{ this.db('rooms/'+this.code+'/t/'+this.rdSeen+'_'+idx+'/i').set(v); }catch(_){ } },
   pushOut(o){ const idx=totalThrows-1; try{ this.db('rooms/'+this.code+'/t/'+this.rdSeen+'_'+idx+'/o').set(o); }catch(_){ } },
-  startMatch(){
-    this.db('rooms/'+this.code).update({st:'playing', op:{court:opts.court, diff:opts.diff}});
+  rosterOrd(){
+    return Object.entries(this.roster)
+      .map(([uid,v])=>({uid, ja:(v&&v.ja)||0}))
+      .sort((a,b)=>a.ja-b.ja)
+      .map(e=>e.uid);
+  },
+  startMatch(mode){
+    this.db('rooms/'+this.code).update({
+      st:'playing', mode:mode||'kojin', ord:this.rosterOrd(),
+      op:{court:opts.court, diff:opts.diff}
+    });
   },
   leave(){
-    const wasHost=this.seat===0, code=this.code, started=this.started;
+    const wasHost=this.isHost, code=this.code, started=this.started;
     this.offAll();
     if(code&&this.ready){
       try{
@@ -906,12 +928,22 @@ const Net={
         if(wasHost&&!started) this.db('rooms/'+code).remove();
       }catch(_){ }
     }
-    this.code=null; this.seat=-1; this.active=false; this.started=false;
+    this.code=null; this.isHost=false; this.active=false; this.started=false;
     this.pendingIn=null; this.pendingOut=null; this.expIn=-1; this.expOut=-1;
-    this.rdSeen=0; this.roster={};
+    this.rdSeen=0; this.roster={}; this.mode='kojin'; this.ord=[]; this.dropped={};
   }
 };
 function netStatus(t){ const el=$('netStatus'); if(el) el.textContent=t||''; }
+function netBootMsg(r){
+  if(r==='anon') return 'Firebase側の設定が残っています。コンソールのAuthenticationで「始める」を押し、ログイン方法の「匿名」を有効にしてください';
+  if(r==='sdk'||r==='net') return 'インターネット接続を確認してください';
+  return '接続エラー：'+String(r).slice(2);
+}
+function netDbErr(e,fb){
+  const m=String((e&&(e.code||e.message))||'');
+  if(/permission/i.test(m)) return 'データベースに拒否されました。Realtime Databaseのルールが手順どおり公開されているか確認してください';
+  return fb;
+}
 function netPanelMode(m){
   $('netEntry').style.display = m==='entry'?'':'none';
   $('netWait').style.display  = m==='entry'?'none':'';
@@ -920,31 +952,100 @@ function netPanelMode(m){
 function openNetPanel(){ $('ovNet').hidden=false; netPanelMode('entry'); }
 function renderNetRoster(){
   const box=$('netRoster'); if(!box) return;
-  const arr=Object.values(Net.roster).sort((a,b)=>(a.seat|0)-(b.seat|0));
+  const arr=Object.values(Net.roster).sort((a,b)=>((a&&a.ja)||0)-((b&&b.ja)||0));
+  const team4=arr.length===4;
   box.innerHTML=arr.map((v,i)=>
-    '<div class="fr"><span>'+(i===0?'部屋主 ':'挑戦者 ')+esc((v.nm||'').slice(0,8))+'</span><b>'+(i===0?'先攻':'後攻')+'</b></div>'
+    '<div class="fr"><span>'+(i+1)+'番手'+(i===0?'（部屋主）':'')+' '+esc((v.nm||'').slice(0,8))+'</span><b>'
+    +(team4?['青','青','オレンジ','オレンジ'][i]:(i===0?'先攻':''))+'</b></div>'
   ).join('')||'<div class="fr"><span>参加者なし</span><b></b></div>';
+  const note=$('netTeamNote');
+  if(note) note.style.display=team4?'':'none';
 }
 function netOnRoster(pv){
   Net.roster=pv||{};
   const cnt=Object.keys(Net.roster).length;
   renderNetRoster();
   if(Net.started){
-    if(cnt<2) netOpponentLeft();
+    const present=new Set(Object.keys(Net.roster));
+    for(const uid of (Net.ord||[])){
+      if(uid!==Net.uid&&!present.has(uid)&&!Net.dropped[uid]){
+        Net.dropped[uid]=1;
+        netHandleDrop(uid);
+      }
+    }
   }else{
-    if(Net.seat===1&&cnt===0){ netFail('部屋が閉じられました'); return; }
-    if(Net.seat===0){
+    if(!Net.isHost&&Net.code&&cnt===0){ netFail('部屋が閉じられました'); return; }
+    if(Net.isHost){
       const b=$('btnNetStart');
       b.disabled=cnt<2;
-      b.textContent=cnt<2?'相手の入室待ち…':'対戦を開始する';
+      b.textContent=cnt<2?'相手の入室待ち…':'個人戦で開始（'+cnt+'人）';
+      const bt=$('btnNetStartTeam');
+      bt.style.display=cnt===4?'':'none';
+      bt.disabled=cnt!==4;
+    }
+  }
+}
+function netAmIFirstAlive(){
+  for(const u of (Net.ord||[])){
+    if(u===Net.uid) return true;
+    if(!Net.dropped[u]) return false;
+  }
+  return true;
+}
+function netHandleDrop(uid){
+  if(!Net.active) return;
+  let touched=null, disp='';
+  for(const p of players){
+    if(p.team&&p.uids){
+      const ix=p.uids.indexOf(uid);
+      if(ix>=0){
+        disp=p.members[ix]||p.name;
+        p.uids.splice(ix,1); p.members.splice(ix,1);
+        if(p.members.length===0){ p.out=true; }
+        else if(p.mIdx>=p.members.length){ p.mIdx=p.mIdx%p.members.length; }
+        touched=p;
+      }
+    }else if(p.uid===uid){
+      disp=p.name;
+      p.out=true;
+      touched=p;
+    }
+  }
+  if(!touched) return;
+  addLog(touched, disp+'が退出（失格あつかい）');
+  renderBoard();
+  const alive=players.filter(p=>!p.out);
+  if(alive.length<=1){
+    if(['win','over','ending','setup'].includes(state)) return;
+    state='ending'; btnGo.disabled=true; paintBtn(null);
+    setTimeout(()=>{
+      if(state==='ending'){
+        if(alive.length===1) winGame(alive[0],true); else allOut();
+      }
+    },1200);
+    return;
+  }
+  if(state==='aimDir'){
+    if(players[cur].out){
+      do{ cur=(cur+1)%players.length; }while(players[cur].out);
+    }
+    enterAimDir(true);
+  }else if(state==='netwait'&&lastThrowerUid===uid){
+    if(netAmIFirstAlive()){
+      const o=computeOutcome();
+      Net.pushOut(o);
+      applyOutcome(o);
     }
   }
 }
 function netOnSt(v){
   if(v==='playing'&&!Net.started&&Net.code){
     Net.started=true;
-    Net.db('rooms/'+Net.code+'/op').once('value').then(sn=>{
-      const op=sn.val()||{};
+    Net.db('rooms/'+Net.code).once('value').then(sn=>{
+      const v=sn.val()||{};
+      const op=v.op||{};
+      Net.mode=(v.mode==='team')?'team':'kojin';
+      Net.ord=Array.isArray(v.ord)?v.ord.slice():(v.ord?Object.values(v.ord):[]);
       if(op.court&&COURTS[op.court]) opts.court=op.court;
       if(op.diff&&DIFF[op.diff]) opts.diff=op.diff;
       segInit($('segC'),'v',opts.court);
@@ -962,6 +1063,7 @@ function netOnRound(rd){
   if(rd!==Net.rdSeen){
     Net.rdSeen=rd;
     Net.pendingIn=null; Net.pendingOut=null; Net.expIn=-1; Net.expOut=-1;
+    Net.dropped={};
     $('ovEnd').hidden=true;
     netNewGame();
   }
@@ -979,16 +1081,28 @@ function netOpponentLeft(){
 }
 function netNewGame(){
   if(!Net.active) return;
-  const arr=Object.entries(Net.roster)
-    .map(([uid,v])=>({uid, nm:((v&&v.nm)||'').trim()||'プレイヤー', seat:(v&&v.seat)|0}))
-    .sort((a,b)=>a.seat-b.seat);
+  const ord=(Net.ord&&Net.ord.length)?Net.ord:Object.keys(Net.roster);
+  const arr=[];
+  for(const uid of ord){
+    const v=Net.roster[uid];
+    if(!v) continue;
+    arr.push({uid, nm:(((v&&v.nm)||'').trim()||'プレイヤー').slice(0,8)});
+  }
   if(arr.length<2){ setTimeout(netNewGame,150); return; }
   C=COURTS[opts.court];
-  players=arr.map((e,i)=>({
-    name:e.nm.slice(0,8), members:[e.nm.slice(0,8)], mIdx:0, team:false,
-    net:e.uid!==Net.uid,
-    score:0, miss:0, out:false, throws:0, col:PCOL[i], hex:PCOLHEX[i]
-  }));
+  if(Net.mode==='team'&&arr.length>=4){
+    players=[0,1].map(t=>({
+      name:TEAM_NAMES[t], team:true,
+      uids:[arr[t*2].uid, arr[t*2+1].uid],
+      members:[arr[t*2].nm, arr[t*2+1].nm],
+      mIdx:0, score:0, miss:0, out:false, throws:0, col:PCOL[t], hex:PCOLHEX[t]
+    }));
+  }else{
+    players=arr.map((e,i)=>({
+      name:e.nm, members:[e.nm], mIdx:0, team:false, uid:e.uid,
+      score:0, miss:0, out:false, throws:0, col:PCOL[i%PCOL.length], hex:PCOLHEX[i%PCOLHEX.length]
+    }));
+  }
   resetPins(); makeForest();
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; celebT=0; celebPower=0;
@@ -1006,7 +1120,7 @@ function netNewGame(){
 }
 function netDeliverIn(idx,v){
   if(!Net.active||!v) return;
-  if(state==='aimDir'&&players[cur]&&players[cur].net&&idx===totalThrows){
+  if(state==='aimDir'&&curIsRemote()&&idx===totalThrows){
     const pa=opts.arc, pg=opts.grip;
     if(ARC[v.a]) opts.arc=v.a;
     if(GRIP[v.g]) opts.grip=v.g;
@@ -1023,20 +1137,22 @@ function netDeliverOut(idx,o){
 }
 function localSettle(){
   if(Net.active){
-    const pl=players[cur];
-    if(pl&&pl.net){
-      if(Net.pendingOut&&Net.pendingOut.idx===totalThrows-1){
-        const o=Net.pendingOut.o; Net.pendingOut=null;
-        applyOutcome(o);
-      }else{
-        state='netwait';
-        msg('結果を同期中…');
-        Net.expectOut();
-      }
-    }else{
+    if(lastThrowerUid===Net.uid){
       const o=computeOutcome();
       Net.pushOut(o);
       applyOutcome(o);
+    }else if(Net.pendingOut&&Net.pendingOut.idx===totalThrows-1){
+      const o=Net.pendingOut.o; Net.pendingOut=null;
+      applyOutcome(o);
+    }else{
+      state='netwait';
+      msg('結果を同期中…');
+      Net.expectOut();
+      if(lastThrowerUid&&Net.dropped[lastThrowerUid]&&netAmIFirstAlive()){
+        const o=computeOutcome();
+        Net.pushOut(o);
+        applyOutcome(o);
+      }
     }
   }else{
     applyOutcome(computeOutcome());
@@ -1165,7 +1281,7 @@ cv.addEventListener('pointerdown',e=>{
   Snd.init();
   if(state==='result'){ action(); return; }
   if(state==='aimDir'){
-    if(players[cur]&&(players[cur].cpu||players[cur].net)) return;
+    if(players[cur]&&(players[cur].cpu||curIsRemote())) return;
     aiming=true;
     cv.setPointerCapture(e.pointerId);
     setAngFrom(e);
@@ -1193,13 +1309,13 @@ btnBack.addEventListener('click',()=>{
 window.addEventListener('keydown',e=>{
   if(!$('ovStart').hidden||!$('ovEnd').hidden) return;
   if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); Snd.init(); action(); }
-  else if(e.code==='ArrowLeft'&&state==='aimDir'&&!(players[cur]&&(players[cur].cpu||players[cur].net))){ baseAng=clamp(baseAng+0.02,ANG_MIN+cfg().range,ANG_MAX-cfg().range); }
-  else if(e.code==='ArrowRight'&&state==='aimDir'&&!(players[cur]&&(players[cur].cpu||players[cur].net))){ baseAng=clamp(baseAng-0.02,ANG_MIN+cfg().range,ANG_MAX-cfg().range); }
+  else if(e.code==='ArrowLeft'&&state==='aimDir'&&!(players[cur]&&(players[cur].cpu||curIsRemote()))){ baseAng=clamp(baseAng+0.02,ANG_MIN+cfg().range,ANG_MAX-cfg().range); }
+  else if(e.code==='ArrowRight'&&state==='aimDir'&&!(players[cur]&&(players[cur].cpu||curIsRemote()))){ baseAng=clamp(baseAng-0.02,ANG_MIN+cfg().range,ANG_MAX-cfg().range); }
 });
 
 function action(){
   const ap=players[cur];
-  if(ap&&(ap.cpu||ap.net)&&state!=='result') return;
+  if(ap&&(ap.cpu||curIsRemote())&&state!=='result') return;
   const now=performance.now();
   if(now-lockT<230) return;
   if(state==='aimDir'){ lockT=now; Snd.tick(); enterSweep(); }
@@ -1246,11 +1362,11 @@ function enterAimDir(withTurnMsg){
     msg(pl.name+'の番。狙いを定めています…');
     elHint.textContent='';
     cpuPlan=cpuThink();
-  }else if(pl.net){
+  }else if(curIsRemote()){
     btnGo.disabled=true; paintBtn(null);
     btnBack.hidden=true;
     setMode('thin');
-    msg(pl.name+'の番。投球を待っています…');
+    msg(sideLabel(pl)+'の番。投球を待っています…');
     elHint.textContent='';
     if(Net.pendingIn&&Net.pendingIn.idx===totalThrows){
       const b=Net.pendingIn; Net.pendingIn=null;
@@ -1359,8 +1475,11 @@ function fireThrow(){
 }
 function doThrow(tx,ty){
   const pl=players[cur];
-  if(Net.active&&!pl.cpu&&!pl.net){
-    Net.pushIn(totalThrows,{tx:+tx.toFixed(3), ty:+ty.toFixed(3), a:opts.arc, g:opts.grip});
+  if(Net.active){
+    lastThrowerUid=throwerUidOf(pl)||null;
+    if(!pl.cpu&&lastThrowerUid===Net.uid){
+      Net.pushIn(totalThrows,{tx:+tx.toFixed(3), ty:+ty.toFixed(3), a:opts.arc, g:opts.grip});
+    }
   }
   pl.throws++; totalThrows++;
   const am=arcCfg(), gm=gripCfg(), grip=opts.grip;
@@ -1679,6 +1798,7 @@ function advanceTurn(){
   }
   stick=null; trail=[];
   cur=pendingNext;
+  while(players[cur]&&players[cur].out){ cur=(cur+1)%players.length; }
   enterAimDir(true);
 }
 function hint(){
@@ -1729,7 +1849,7 @@ function fillFinals(){
   });
   const ba=$('btnAgain');
   if(Net.active){
-    if(Net.seat===0){ ba.disabled=false; ba.textContent='再戦する（同じ部屋）'; }
+    if(Net.isHost){ ba.disabled=false; ba.textContent='再戦する（同じ部屋）'; }
     else{ ba.disabled=true; ba.textContent='部屋主の再戦待ち…'; }
   }else{
     ba.disabled=false; ba.textContent='同じ設定でもう一度';
@@ -2551,7 +2671,7 @@ $('btnStart').addEventListener('click',()=>{Snd.init(); newGame();});
 $('btnAgain').addEventListener('click',()=>{
   Snd.init();
   if(Net.active){
-    if(Net.seat===0&&Net.code){ Net.db('rooms/'+Net.code).update({rd:(Net.rdSeen|0)+1}); }
+    if(Net.isHost&&Net.code){ Net.db('rooms/'+Net.code).update({rd:(Net.rdSeen|0)+1}); }
     return;
   }
   newGame();
@@ -2600,12 +2720,7 @@ $('btnNet').addEventListener('click',async()=>{
   openNetPanel();
   netStatus('接続中…');
   const ok=await Net.boot();
-  if(ok!==true){
-    netStatus(ok==='anon'
-      ? 'Firebase側で匿名ログインが未有効です。Authenticationのログイン方法で匿名をオンにしてください'
-      : 'インターネット接続を確認してください');
-    return;
-  }
+  if(ok!==true){ netStatus(netBootMsg(ok)); return; }
   netStatus('部屋を作るか、コードで入室してください');
 });
 $('btnNetBack').addEventListener('click',()=>{
@@ -2615,7 +2730,11 @@ $('btnNetBack').addEventListener('click',()=>{
   netStatus('');
 });
 $('btnMakeRoom').addEventListener('click',async()=>{
-  if(!Net.ready){ netStatus('接続できていません。開き直してください'); return; }
+  if(!Net.ready){
+    netStatus('接続中…');
+    const ok=await Net.boot();
+    if(ok!==true){ netStatus(netBootMsg(ok)); return; }
+  }
   if(Net.code) return;
   try{
     netStatus('部屋を作成中…');
@@ -2625,11 +2744,15 @@ $('btnMakeRoom').addEventListener('click',async()=>{
     renderNetRoster();
     netStatus('このコードを相手に伝えてください');
   }catch(e){
-    netStatus('部屋を作れませんでした。少し待ってやり直してください');
+    netStatus(netDbErr(e,'部屋を作れませんでした。少し待ってやり直してください'));
   }
 });
 $('btnJoinRoom').addEventListener('click',async()=>{
-  if(!Net.ready){ netStatus('接続できていません。開き直してください'); return; }
+  if(!Net.ready){
+    netStatus('接続中…');
+    const ok=await Net.boot();
+    if(ok!==true){ netStatus(netBootMsg(ok)); return; }
+  }
   if(Net.code) return;
   const code=(($('netCodeIn').value)||'').trim().toUpperCase();
   if(code.length!==4){ netStatus('4文字のコードを入力してください'); return; }
@@ -2644,11 +2767,14 @@ $('btnJoinRoom').addEventListener('click',async()=>{
     netStatus(m==='nf'?'その部屋が見つかりません'
       :m==='full'?'その部屋は満員です'
       :m==='started'?'その部屋はすでに対戦中です'
-      :'入室できませんでした。通信環境を確認してください');
+      :netDbErr(e,'入室できませんでした。通信環境を確認してください'));
   }
 });
 $('btnNetStart').addEventListener('click',()=>{
-  if(Net.seat===0&&Net.code) Net.startMatch();
+  if(Net.isHost&&Net.code) Net.startMatch('kojin');
+});
+$('btnNetStartTeam').addEventListener('click',()=>{
+  if(Net.isHost&&Net.code&&Object.keys(Net.roster).length===4) Net.startMatch('team');
 });
 window.addEventListener('resize',resize);
 if(window.visualViewport) window.visualViewport.addEventListener('resize',resize);
