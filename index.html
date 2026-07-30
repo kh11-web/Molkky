@@ -2038,6 +2038,7 @@ function draw(){
 /* ================= ループ ================= */
 let last=0;
 function loop(ts){
+  if(elStage.clientWidth!==cw||elStage.clientHeight!==ch) resize();
   let dt=Math.min(0.033,(ts-last)/1000||0.016);
   last=ts;
   shake*=Math.exp(-dt*7);
@@ -2149,6 +2150,9 @@ if(window.visualViewport) window.visualViewport.addEventListener('resize',resize
 window.addEventListener('orientationchange',()=>setTimeout(resize,300));
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>resize());
 setTimeout(resize,450);
+if(window.ResizeObserver) new ResizeObserver(()=>resize()).observe(elStage);
+window.addEventListener('pageshow',()=>resize());
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) resize(); });
 
 /* ================= 起動 ================= */
 resetPins();
