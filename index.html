@@ -28,7 +28,7 @@
   --p1:#7396c4; --p2:#df9a68; --p3:#7bb389; --p4:#a98cc4;
   --fh:'Yusei Magic','Zen Maru Gothic',sans-serif;
 }
-*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
 html,body{margin:0;padding:0;}
 body{
   background:var(--paper);
@@ -282,7 +282,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 #nameBox{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
 .nameIn{
   background:#fff; border:2px solid var(--ink); border-radius:12px 4px 12px 4px;
-  color:var(--ink); padding:9px 10px; font-size:13px; font-weight:700; font-family:'Zen Maru Gothic',sans-serif;
+  color:var(--ink); padding:9px 10px; font-size:16px; font-weight:700; font-family:'Zen Maru Gothic',sans-serif;
   width:100%;
 }
 .nameIn::placeholder{color:#b3a488; font-weight:700;}
@@ -328,6 +328,16 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 .joinrow .subbtn{margin-top:0; width:auto; flex:none; padding:10px 16px;}
 .bigbtn:disabled{background:#c9c0ae; box-shadow:none; cursor:default; transform:none;}
 #netRoster{margin:2px 0 8px;}
+#achToast{
+  position:fixed; left:50%; top:14px; transform:translate(-50%,-140%);
+  z-index:60; background:var(--card); border:2.5px solid var(--good);
+  border-radius:16px; padding:9px 16px; font-size:13px; font-weight:700;
+  box-shadow:0 4px 0 rgba(91,71,58,.22);
+  transition:transform .35s ease; pointer-events:none; text-align:center;
+}
+#achToast.show{transform:translate(-50%,0);}
+#achToast b{color:var(--good); margin-right:6px;}
+#achToast span{display:block; font-size:11px; color:var(--sub);}
 .card.toss{max-width:280px; text-align:center; padding:22px 18px;}
 .tosscap{font-size:13px; color:var(--sub); font-weight:700; margin-bottom:6px;}
 #tossName{font-family:var(--fh); font-size:34px; min-height:46px; letter-spacing:.04em;}
@@ -344,6 +354,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
       <button class="hbtn hand2" id="btnRules">ルール▼</button>
       <button class="hbtn hand" id="btnHome">HOME</button>
       <button class="hbtn hand2" id="btnSnd" aria-label="効果音の切り替え">🔊</button>
+      <button class="hbtn hand" id="btnBgm" aria-label="BGMの切り替え">🎵</button>
       <button class="hbtn hand" id="btnRe" aria-label="ゲームをやり直す">↺</button>
     </header>
     <div id="brandbar"></div>
@@ -424,9 +435,10 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
         <li>タップすると矢印がゆっくり左右に振れる。狙いのラインでタップして方向を固定。中央の目盛りぴったりならPERFECTボーナスで方向のブレゼロ、着地のばらつきも小さくなります。この判定は難易度が上がるほど狭くなります</li>
         <li>モルックが振り子スイング。前へ振れている間だけ投げられます。やさしいは着地予測マーカーの位置でタップ。ふつう・むずかしいは左のパワーゲージと素振りの大きさが目安で、何mに落ちるかは投げて体で覚えます。ふつうはゲージに前回の強さの印が残ります。ゲージ上の赤い帯まで振り切ると投げすぎです</li>
       </ol>
-      <p>矢印スタート後は、画面のどこをタップしても反応します。ボタンまでポインタを戻す必要はありません。</p>
+      <p>矢印スタート後は、画面のどこをタップしても反応します。ボタンまでポインタを戻す必要はありません。①からやり直すボタンは、ひとりで練習しているときだけ使えます。対戦ときょうの一本では投げ直しはできません。</p>
       <p>ねらいのガイド線は手前数mで薄れて消えます。実物と同じで、その先の延長線はイメージで狙ってください。やさしいほどガイドが長く伸びます。</p>
       <p>通信対戦は、部屋を作った人が4文字のコードを伝え、最大4人まで入室できます。部屋主は人数がそろったところで個人戦として開始でき、4人ちょうどのときは2対2のチーム戦も選べます。チーム分けはロビーで各自が青かオレンジを選べます。選んでいない人は人数が合うよう自動で振り分けます。投げる順は入室順のまま、だれから始めるかは実物の公式戦と同じ抽選方式で、ルーレットが決めます。コートと難易度は部屋主の設定が使われます。途中で回線が切れた人は失格あつかいになり、残りのメンバーで続行します。再戦の合図は部屋主が出します。</p>
+      <p>つめモルックは詰将棋式の問題集です。決められた配置と持ち点から、規定投数以内に50点ぴったりを狙います。1点でも超えたら失敗で、25点戻りやミス失格の規則は使いません。ベスト投数は端末に保存され、問題は不定期に追加されます。</p>
       <p>振り子の振り幅は、いちばん遠いピンの少し先まで自動で伸び縮みします。ピンが奥に流れるほど振り幅が広がってマーカーが速くなり、さらに飛距離が伸びるほど着地位置のばらつきも大きくなります。実物と同じで、8mを超える遠投は狙いどおりに落とすだけでも難しくなります。近い距離はゆっくりで合わせやすいままです。</p>
       <h3>弾道と投げ技（実際の技術に対応）</h3>
       <table class="tec">
@@ -512,7 +524,10 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
       <button class="hand2" data-v="hard">むずかしい</button>
     </div>
     <button class="bigbtn" id="btnStart">ゲームスタート</button>
+    <button class="bigbtn" id="btnDaily" style="margin-top:9px; background:var(--good);">つめモルック（詰め問題に挑戦）</button>
     <button class="subbtn" id="btnNet">通信対戦（部屋コードで2〜4人）</button>
+    <button class="subbtn" id="btnAch">じっせき・称号</button>
+    <p class="lead" id="myTitle" style="text-align:center; margin:8px 0 0;"></p>
   </div>
 </div>
 
@@ -525,6 +540,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
     <p class="lead" id="endMeta" style="margin:0 0 10px"></p>
     <div class="finals" id="endList"></div>
     <button class="subbtn" id="btnShare">けっかをシェア</button>
+    <button class="subbtn" id="btnTsumeNext" hidden>つぎの問題へ</button>
     <button class="bigbtn" id="btnAgain">同じ設定でもう一度</button>
     <button class="subbtn" id="btnToSetup">HOMEに戻る（形式や難易度を変える）</button>
   </div>
@@ -560,6 +576,51 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
       <p class="lead" id="netTeamNote" style="display:none">チーム戦は各自が上でチームを選べます。選んでいない人は人数が合うよう自動で振り分けます</p>
     </div>
     <button class="subbtn" id="btnNetBack">もどる</button>
+  </div>
+</div>
+
+<div class="ov" id="ovAch" hidden>
+  <div class="card">
+    <h2><b>じっせき・称号</b></h2>
+    <p class="lead" id="achMine"></p>
+    <div class="finals" id="achList"></div>
+    <button class="subbtn" id="btnAchBack">もどる</button>
+  </div>
+</div>
+
+<div class="ov" id="ovTsume" hidden>
+  <div class="card">
+    <h2><b>つめモルック</b></h2>
+    <p class="lead">詰将棋式の問題集です。決められた配置と持ち点から、規定投数以内に50点ぴったりを狙います。1点でも超えたらその場で失敗。25点戻りやミス失格はありません。問題は不定期で追加されます。</p>
+    <div class="finals" id="tsumeList"></div>
+    <button class="subbtn" id="btnTsumeBack">もどる</button>
+  </div>
+</div>
+
+<div class="ov" id="ovDaily" hidden>
+  <div class="card">
+    <h2><b>きょうの一本</b><span id="dailyDate" style="font-size:14px; color:var(--sub);"></span></h2>
+    <p class="lead">毎日おなじ条件（ふつう・公式コート・ひとり）で、50点ぴったりまでの投数を競います。最初の1回だけが公式記録です。</p>
+    <div><span class="optlabel">なまえ（ランキングに載ります）</span></div>
+    <input class="nameIn" id="dailyName" maxlength="8" placeholder="あなた">
+    <p class="lead" id="dailyMine" style="margin:8px 0 4px;"></p>
+    <div class="finals" id="dailyRank"></div>
+    <button class="bigbtn" id="btnDailyGo">公式記録に挑戦する</button>
+    <button class="subbtn" id="btnDailyBack">もどる</button>
+  </div>
+</div>
+
+<div id="achToast"></div>
+
+<div class="ov" id="ovVerify" hidden>
+  <div class="card">
+    <h2><b>公式記録</b></h2>
+    <p class="lead" id="vfMeta"></p>
+    <p id="vfHead" style="font-family:var(--fh); font-size:20px; margin:2px 0 8px;"></p>
+    <div class="finals" id="vfScore"></div>
+    <div id="vfLog" style="font-size:22px; letter-spacing:2px; margin:4px 0 10px; word-break:break-all;"></div>
+    <p class="lead">この記録は、達成した瞬間にこもれびモルックが自動保存したものです。あとから書き換えることはできません。</p>
+    <button class="bigbtn" id="btnVfPlay">じぶんも遊ぶ</button>
   </div>
 </div>
 
@@ -649,7 +710,143 @@ let punchT=0, punchD=0.3, punchX=0, punchY=0, punchZ=1;
 let glow={life:0,max:0.5,col:'255,210,63',a:0};
 let ilines=[], pillars=[];
 let logEntries=[];
-let throwLog=[];
+let throwLog=[], shareKey=null;
+let dailyMode=false, dailyName='';
+let tsume=null;
+const TSUME_BUILTIN=[
+ {id:'b01', title:'まずは一本', sc:49, par:1, pins:[{n:1,x:0,y:4.2}]},
+ {id:'b02', title:'えらんで一本', sc:45, par:1, pins:[{n:5,x:-0.9,y:4.0},{n:9,x:0.9,y:4.3}]},
+ {id:'b03', title:'ふたつでちょうど', sc:48, par:1, pins:[{n:7,x:-0.09,y:4.1},{n:8,x:0.09,y:4.12}]},
+ {id:'b04', title:'みっつ薙ぎ', sc:47, par:1, pins:[{n:2,x:-0.17,y:4.2},{n:6,x:0,y:4.22},{n:10,x:0.17,y:4.2}]},
+ {id:'b05', title:'すきまを抜く', sc:38, par:1, pins:[{n:12,x:0,y:5.2},{n:3,x:-0.3,y:5.2},{n:4,x:0.3,y:5.2}]},
+ {id:'b06', title:'とおくの相棒', sc:40, par:1, pins:[{n:10,x:0.4,y:8.6}]},
+ {id:'b07', title:'二段がまえ', sc:39, par:2, pins:[{n:5,x:0,y:4.0},{n:6,x:0.6,y:6.5}]},
+ {id:'b08', title:'かたまりから削る', sc:44, par:2, pins:[{n:1,x:-0.16,y:4.3},{n:2,x:0,y:4.32},{n:3,x:0.16,y:4.3}]},
+ {id:'b09', title:'ドボンのふち', sc:49, par:2, pins:[{n:1,x:-1.2,y:5.0},{n:11,x:0.1,y:4.3},{n:12,x:0.3,y:4.5}]},
+ {id:'b10', title:'鬼詰め', sc:36, par:3, pins:[{n:12,x:-0.5,y:9.3},{n:2,x:0.1,y:4.1},{n:9,x:0.35,y:4.15}]},
+ {id:'b11', title:'罠のとなり', sc:44, par:1, pins:[{n:6,x:0,y:4.3},{n:12,x:0,y:4.62}]},
+ {id:'b12', title:'よんほん勝負', sc:46, par:1, pins:[{n:1,x:-0.09,y:4.15},{n:2,x:0.09,y:4.15},{n:3,x:-0.09,y:4.31},{n:5,x:0.09,y:4.31}]},
+ {id:'b13', title:'とおい二択', sc:39, par:1, pins:[{n:11,x:-1.3,y:7.8},{n:8,x:1.3,y:7.8}]},
+ {id:'b14', title:'ふたてに分かれて', sc:37, par:2, pins:[{n:6,x:-0.8,y:4.4},{n:7,x:0.8,y:6.9}]},
+ {id:'b15', title:'ぴったり本数ふたたび', sc:45, par:2, pins:[{n:1,x:-0.77,y:4.2},{n:2,x:-0.6,y:4.22},{n:3,x:-0.43,y:4.2},{n:4,x:0.52,y:4.25},{n:8,x:0.69,y:4.27}]},
+ {id:'b16', title:'せまき門', sc:38, par:1, pins:[{n:12,x:0,y:6.0},{n:5,x:-0.24,y:6.0},{n:6,x:0.24,y:6.0}]},
+ {id:'b17', title:'ドボン地雷原', sc:47, par:2, pins:[{n:9,x:-0.18,y:5.0},{n:10,x:0,y:5.02},{n:11,x:0.18,y:5.0},{n:3,x:-1.5,y:8.2},{n:1,x:1.15,y:4.2},{n:2,x:1.31,y:4.22}]},
+ {id:'b18', title:'さいごの一往復', sc:35, par:3, pins:[{n:12,x:0,y:8.8},{n:4,x:0.3,y:8.8},{n:2,x:-0.9,y:4.1},{n:1,x:0.9,y:4.15}]},
+ {id:'b19', title:'ちいさく刻む', sc:48, par:2, pins:[{n:10,x:-0.3,y:5.4},{n:11,x:0.1,y:5.6},{n:12,x:0.45,y:5.3},{n:1,x:-1.1,y:5.5},{n:3,x:-1.27,y:5.52}]},
+ {id:'b20', title:'真・鬼詰め', sc:31, par:3, pins:[{n:12,x:-0.6,y:9.6},{n:8,x:-0.94,y:9.6},{n:7,x:0,y:4.3},{n:9,x:0.26,y:4.3},{n:5,x:-0.26,y:4.3}]}
+];
+let tsumeStages=TSUME_BUILTIN.slice();
+let tsumeExtraLoaded=false;
+let gamePita=0;
+const ACH=[
+ {id:'win1',    tier:1, nm:'はじめての勝利',       tt:'もりの新人',     ds:'どのモードでもいいので1勝する'},
+ {id:'tsume1',  tier:1, nm:'はじめての詰め',       tt:'見習い解き手',   ds:'つめモルックを1問クリアする'},
+ {id:'snipe',   tier:2, nm:'はじめての狙撃',       tt:'狙撃見習い',     ds:'対戦か練習で、10番以上のピンを単独で倒す'},
+ {id:'netwin',  tier:2, nm:'つながる森',           tt:'旅する投手',     ds:'通信対戦で勝つ'},
+ {id:'teamwin', tier:2, nm:'なかまと一勝',         tt:'たよれる相棒',   ds:'チーム戦で勝つ'},
+ {id:'mow5',    tier:2, nm:'五本薙ぎ',             tt:'草刈り名人',     ds:'対戦か練習で、1投で5本以上倒す'},
+ {id:'fifty',   tier:3, nm:'50ぴったり',           tt:'ぴったり職人',   ds:'50点ちょうどで上がる'},
+ {id:'perfect3',tier:3, nm:'三連PERFECT',          tt:'精密機械',       ds:'1試合でPERFECTを3回出す'},
+ {id:'vs5',     tier:3, nm:'めちゃつよ討伐',       tt:'森の実力者',     ds:'めちゃつよCPUに勝つ'},
+ {id:'oni',     tier:3, nm:'おに討伐',             tt:'鬼はらい',       ds:'おにCPUに勝つ'},
+ {id:'streak3', tier:3, nm:'三連勝',               tt:'連勝街道',       ds:'負けなしで3連勝する'},
+ {id:'win10',   tier:3, nm:'通算10勝',             tt:'常連プレイヤー', ds:'合計10回勝つ'},
+ {id:'tsume5',  tier:3, nm:'つめ五番勝負',         tt:'解き手',         ds:'つめモルックを5問クリアする'},
+ {id:'mow7',    tier:4, nm:'七本薙ぎ',             tt:'伝説の薙ぎ手',   ds:'対戦か練習で、1投で7本以上倒す'},
+ {id:'phoenix', tier:4, nm:'ドボンからの逆転',     tt:'不死鳥',         ds:'25点戻りを経験した試合で勝つ'},
+ {id:'kami',    tier:4, nm:'かみ討伐',             tt:'神をこえし者',   ds:'かみCPUに勝つ'},
+ {id:'snipe10', tier:4, nm:'狙撃十番',             tt:'森の狙撃手',     ds:'単独の10番以上を通算10回決める'},
+ {id:'pita50',  tier:4, nm:'PERFECT五十',          tt:'振り子の主',     ds:'PERFECTを通算50回出す'},
+ {id:'nushi',   tier:4, nm:'ぬし討伐',             tt:'森を継ぐ者',     ds:'もりのぬしに勝つ'},
+ {id:'tsume10', tier:4, nm:'つめ十番勝負',         tt:'つめの匠',       ds:'つめモルックを10問クリアする'},
+ {id:'speed5',  tier:5, nm:'5投じまい',            tt:'しっぷうのごとく', ds:'5投以内の50点ぴったりで勝つ'},
+ {id:'win50',   tier:5, nm:'通算50勝',             tt:'もりの重鎮',     ds:'合計50回勝つ'},
+ {id:'tsumeAll',tier:5, nm:'つめ全問クリア',       tt:'詰めの達人',     ds:'内蔵の全問をクリアする'},
+ {id:'nushiHard',tier:6,nm:'真・ぬし討伐',         tt:'しんのぬし',     ds:'むずかしい・公式コートでもりのぬしに勝つ'}
+];
+function incCount(key){
+  try{
+    const v=(parseInt(localStorage.getItem(key)||'0',10)||0)+1;
+    localStorage.setItem(key,String(v));
+    return v;
+  }catch(_){ return 0; }
+}
+function winStreak(win){
+  try{
+    const v=win?(parseInt(localStorage.getItem('komorebi_streak')||'0',10)||0)+1:0;
+    localStorage.setItem('komorebi_streak',String(v));
+    return v;
+  }catch(_){ return 0; }
+}
+function achMap(){
+  try{ return JSON.parse(localStorage.getItem('komorebi_ach_v1')||'{}'); }catch(_){ return {}; }
+}
+function currentTitle(){
+  const m=achMap();
+  let best=null;
+  for(const a of ACH){ if(m[a.id]&&(!best||a.tier>best.tier)) best=a; }
+  return best?best.tt:'かけだし';
+}
+function updateTitleUi(){
+  const el=$('myTitle');
+  if(el) el.textContent='現在の称号：'+currentTitle();
+}
+let achQueue=[], achShowing=false;
+function achToast(d){
+  achQueue.push(d);
+  if(!achShowing) achNext();
+}
+function achNext(){
+  const d=achQueue.shift();
+  if(!d){ achShowing=false; return; }
+  achShowing=true;
+  const el=$('achToast');
+  el.innerHTML='<b>実績解除</b> '+esc(d.nm)+'<span>称号：'+esc(d.tt)+'</span>';
+  el.classList.add('show');
+  Snd.cheer(true);
+  setTimeout(()=>{
+    el.classList.remove('show');
+    setTimeout(achNext,350);
+  },2400);
+}
+function ach(id){
+  let fresh=false;
+  try{
+    const m=achMap();
+    if(m[id]) return;
+    m[id]=1;
+    localStorage.setItem('komorebi_ach_v1',JSON.stringify(m));
+    fresh=true;
+  }catch(_){ return; }
+  if(!fresh) return;
+  const d=ACH.find(a=>a.id===id);
+  if(d) achToast(d);
+  updateTitleUi();
+}
+function bumpWins(){
+  try{
+    const w=(parseInt(localStorage.getItem('komorebi_wins')||'0',10)||0)+1;
+    localStorage.setItem('komorebi_wins',String(w));
+    if(w>=10) ach('win10');
+    if(w>=50) ach('win50');
+  }catch(_){ }
+}
+function iWonAch(pl){
+  if(Net.active){
+    return pl.team ? (pl.uids&&pl.uids.includes(Net.uid)) : pl.uid===Net.uid;
+  }
+  return !pl.cpu;
+}
+function renderAchList(){
+  const box=$('achList'); if(!box) return;
+  const m=achMap();
+  box.innerHTML=ACH.map(a=>{
+    const on=!!m[a.id];
+    return '<div class="fr"'+(on?' style="border-color:var(--good)"':' style="opacity:.55"')+'>'
+      +'<span>'+(on?'✅ ':'🔒 ')+esc(a.nm)+'<br><small style="color:var(--sub)">'+esc(a.ds)+'</small></span>'
+      +'<b>'+esc(a.tt)+'</b></div>';
+  }).join('');
+}
 let scale=90, camY=-1.6, bandH=180, cw=340, ch=550, dpr=1;
 
 /* ================= DOM ================= */
@@ -694,6 +891,7 @@ const slidePreview=d=>{const v=baseSpeed(d)*arcCfg().v;return v*v/(2*STICK_DECEL
 const cfg=()=>DIFF[opts.diff];
 const assistFull=()=>opts.diff==='easy';
 const guideLen=()=>Math.min(cfg().guide,throwValid);
+const canRedo=()=>players.length===1&&!dailyMode&&!Net.active&&!tsume;
 const pendDist=s=>D_MIN+(throwTop-D_MIN)*(s+1)/2;
 const pendPeriod=()=>cfg().period*Math.sqrt((throwTop-D_MIN)/4.7);
 const throwerOf=p=>p.members[p.mIdx%p.members.length];
@@ -718,7 +916,8 @@ function addFlash(a){ flashT=Math.max(flashT,a); }
 const Snd={
   ac:null, on:true,
   init(){ if(!this.ac){ try{ this.ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-    if(this.ac&&this.ac.state==='suspended') this.ac.resume(); },
+    if(this.ac&&this.ac.state==='suspended') this.ac.resume();
+    if(typeof Bgm!=='undefined'&&Bgm.on) Bgm.start(); },
   noise(dur){
     const sr=this.ac.sampleRate;
     const buf=this.ac.createBuffer(1,Math.max(8,Math.floor(sr*dur)),sr), d=buf.getChannelData(0);
@@ -1032,6 +1231,62 @@ const Net={
     this.rdSeen=0; this.roster={}; this.mode='kojin'; this.ord=[]; this.dropped={}; this.fo=0; this.tord=[];
   }
 };
+const Bgm={
+  on:(function(){ try{ return localStorage.getItem('komorebi_bgm')!=='0'; }catch(_){ return true; } })(),
+  started:false, timer:null, next:0, step:0,
+  chords:[[57,60,64],[53,57,60],[48,52,55],[55,59,62]],
+  scale:[57,60,62,64,67,69,72],
+  f(m){ return 440*Math.pow(2,(m-69)/12); },
+  note(t,midi,dur,vol,type){
+    const ac=Snd.ac; if(!ac) return;
+    const o=ac.createOscillator(); o.type=type||'triangle';
+    o.frequency.value=this.f(midi);
+    const g=ac.createGain();
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol,t+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t+dur+0.05);
+  },
+  start(){
+    if(this.started||!this.on||!Snd.ac) return;
+    this.started=true;
+    this.next=Snd.ac.currentTime+0.15;
+    this.timer=setInterval(()=>this.tick(),180);
+  },
+  stop(){
+    if(this.timer){ clearInterval(this.timer); this.timer=null; }
+    this.started=false;
+  },
+  toggle(){
+    this.on=!this.on;
+    try{ localStorage.setItem('komorebi_bgm',this.on?'1':'0'); }catch(_){ }
+    if(this.on){ Snd.init(); this.start(); }
+    else this.stop();
+    const b=$('btnBgm');
+    if(b) b.style.opacity=this.on?'1':'0.4';
+  },
+  tick(){
+    if(!Snd.ac||!this.on) return;
+    const beat=0.72;
+    while(this.next<Snd.ac.currentTime+0.7){
+      const bar=Math.floor(this.step/3)%this.chords.length;
+      const b=this.step%3;
+      const ch=this.chords[bar];
+      if(b===0){
+        this.note(this.next,ch[0]-24,beat*0.95,0.05,'sine');
+        if(Math.random()<0.6){
+          const m=this.scale[(Math.random()*this.scale.length)|0]+12;
+          this.note(this.next+beat*(Math.random()<0.5?0.5:1),m,beat*1.5,0.028,'sine');
+        }
+      }else{
+        for(const m of ch){ this.note(this.next,m,beat*0.55,0.015,'triangle'); }
+      }
+      this.step++;
+      this.next+=beat;
+    }
+  }
+};
 function netStatus(t){ const el=$('netStatus'); if(el) el.textContent=t||''; }
 function netBootMsg(r){
   if(r==='anon') return 'Firebase側の設定が残っています。コンソールのAuthenticationで「始める」を押し、ログイン方法の「匿名」を有効にしてください';
@@ -1194,6 +1449,7 @@ function netNewGame(){
 }
 function netNewGameInner(){
   if(!Net.active) return;
+  tsume=null; dailyMode=false;
   const ord=(Net.ord&&Net.ord.length)?Net.ord:Object.keys(Net.roster);
   const arr=[];
   for(const uid of ord){
@@ -1229,7 +1485,7 @@ function netNewGameInner(){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog(); throwLog=[];
+  clearLog(); throwLog=[]; shareKey=null; gamePita=0;
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach();
   renderBoard();
@@ -1371,7 +1627,7 @@ function makeSides(){
     players=[me,bot];
   }else{
     players=Array.from({length:opts.n},(_,i)=>{
-      const nm=opts.n===1?'あなた':((namesCache[i]&&namesCache[i].trim())||'プレイヤー'+(i+1));
+      const nm=opts.n===1?((dailyMode&&dailyName)?dailyName:'あなた'):((namesCache[i]&&namesCache[i].trim())||'プレイヤー'+(i+1));
       return {name:nm, members:[nm], mIdx:0, team:false,
         score:0, miss:0, out:false, throws:0, col:PCOL[i], hex:PCOLHEX[i]};
     });
@@ -1424,6 +1680,7 @@ function setAngFrom(e){
 }
 btnGo.addEventListener('click',()=>{Snd.init(); action();});
 btnBack.addEventListener('click',()=>{
+  if(!canRedo()) return;
   if(performance.now()-phaseT<400) return;
   if(state==='sweep'||state==='pendulum'){ enterAimDir(false); }
 });
@@ -1609,7 +1866,7 @@ function enterSweep(){
   setMode('thin');
   phaseT=performance.now();
   swT=0; swDir=Math.random()<0.5?1:-1;
-  btnBack.hidden=false;
+  btnBack.hidden=!canRedo();
   msg('② 矢印が振れます。狙いのラインで画面のどこでもタップ',null,2300);
 }
 function lockDirection(){
@@ -1620,6 +1877,11 @@ function lockDirection(){
   if(pita){
     dirLocked=baseAng;
     Snd.pita();
+    gamePita++;
+    if(!tsume){
+      if(gamePita>=3) ach('perfect3');
+      if(incCount('komorebi_pitas')>=50) ach('pita50');
+    }
     hitstopT=0.06;
     addFlash(0.3);
     addGlow('#bfe3ff',0.35,0.5);
@@ -1644,7 +1906,7 @@ function enterPendulum(){
   setMode('thin');
   phaseT=performance.now();
   pendT=0; pendS=-1; pendFwd=false;
-  btnBack.hidden=false;
+  btnBack.hidden=!canRedo();
   msg(assistFull()
     ?'③ 前スイング中に狙いの距離でタップ（どこでもOK）。赤いOVERは投げすぎ'
     :'③ 前スイング中にタップ。左のゲージと素振りの大きさで距離を読む',null,2600);
@@ -1894,10 +2156,10 @@ function applyOutcome(o){
   let text='', cls='';
   if(ks.length===0){
     pl.miss++;
-    addStamp(pl.miss>=3?'しっかく…':'MISS…', pl.miss>=3?'#ff8a7a':'#9fb2c4');
+    addStamp((!tsume&&pl.miss>=3)?'しっかく…':'MISS…', (!tsume&&pl.miss>=3)?'#ff8a7a':'#9fb2c4');
     Snd.miss();
-    throwLog.push(pl.miss>=3?'❌':'⚪');
-    if(pl.miss>=3){
+    throwLog.push((!tsume&&pl.miss>=3)?'❌':'⚪');
+    if(!tsume&&pl.miss>=3){
       pl.out=true;
       Snd.bust();
       text='ミス3回連続。'+pl.name+'は失格'+leanNote; cls='bad';
@@ -1911,6 +2173,10 @@ function applyOutcome(o){
     const pts=ks.length===1?ks[0].n:ks.length;
     const ns=pl.score+pts;
     if(ks.length>=3){
+      if(!tsume){
+        if(ks.length>=5) ach('mow5');
+        if(ks.length>=7) ach('mow7');
+      }
       burst(cx,cy,ks.length>=5?34:18);
       addShake(ks.length>=5?4:2.5);
       addGlow('#ffd23f',ks.length>=5?0.55:0.32,0.7);
@@ -1924,6 +2190,10 @@ function applyOutcome(o){
       const nv=ks[0].n;
       addRingIn(cx,cy,'#ffd23f');
       if(nv>=10){
+        if(!tsume){
+          ach('snipe');
+          if(incCount('komorebi_snipes')>=10) ach('snipe10');
+        }
         slowT=0.5; hitstopT=0.05;
         burst(cx,cy,22,'gold');
         addGlow('#ffd23f',0.55,0.9);
@@ -1946,7 +2216,19 @@ function applyOutcome(o){
       }
     }
     if(ns>50){
+      if(tsume){
+        pl.score=ns;
+        addStamp('しっぱい…','#ff8a7a');
+        Snd.bust();
+        throwLog.push('🌀');
+        pl.mIdx=(pl.mIdx+1)%pl.members.length;
+        renderBoard();
+        msg('+'+pts+'点で'+ns+'点。50点を超えたため失敗です','bad');
+        tsumeLose('50点を超えました（'+ns+'点）');
+        return;
+      }
       pl.score=25;
+      pl.hadBust=true;
       addStamp('BUST!','#ff9c54');
       addGlow('#e8836e',0.45,0.7);
       puff(cx,cy,16,'#b9b3a4');
@@ -1978,13 +2260,19 @@ function applyOutcome(o){
         spawnImpact(X(cx),Y(cy),18,1);
         slowT=0.6;
         pl.mIdx=(pl.mIdx+1)%pl.members.length;
-        renderBoard(); winGame(pl,false); return;
+        renderBoard();
+        if(tsume){ tsumeWin(); }else{ winGame(pl,false); }
+        return;
       }
     }
   }
   pl.mIdx=(pl.mIdx+1)%pl.members.length;
   renderBoard();
   msg(text,cls);
+  if(tsume&&pl.score!==50&&pl.throws>=tsume.stage.par){
+    tsumeLose('規定の'+tsume.stage.par+'投で50点に届きませんでした');
+    return;
+  }
   const alive=players.filter(p=>!p.out);
   if(players.length>1 && alive.length===1){
     state='ending'; btnGo.disabled=true; paintBtn(null);
@@ -2031,6 +2319,12 @@ function advanceTurn(){
   enterAimDir(true);
 }
 function hint(){
+  if(tsume){
+    const r2=50-players[cur].score;
+    goldPin=r2<=12?r2:0;
+    elHint.textContent='第'+(tsume.idx+1)+'問・あと'+Math.max(0,tsume.stage.par-players[cur].throws)+'投で50ぴったり';
+    return;
+  }
   const pl=players[cur], r=50-pl.score;
   let t;
   if(r>24) t='あと'+r+'点。低め＋ヨコでかたまりを狙い、本数で稼ごう';
@@ -2043,6 +2337,27 @@ function winGame(pl,byElim){
   state='win'; goldPin=0; setMode('end'); renderBoard();
   btnGo.disabled=true; paintBtn(null); btnBack.hidden=true;
   Snd.win();
+  if(iWonAch(pl)){
+    ach('win1');
+    bumpWins();
+    if(winStreak(true)>=3) ach('streak3');
+    if(!byElim) ach('fifty');
+    if(pl.hadBust) ach('phoenix');
+    if(pl.team) ach('teamwin');
+    if(!byElim&&pl.throws<=5) ach('speed5');
+    if(!Net.active&&opts.mode==='cpu'){
+      if(opts.cpu==='vstrong') ach('vs5');
+      if(opts.cpu==='oni') ach('oni');
+      if(opts.cpu==='kami') ach('kami');
+      if(opts.cpu==='nushi'){
+        ach('nushi');
+        if(opts.diff==='hard'&&opts.court==='long') ach('nushiHard');
+      }
+    }
+    if(Net.active) ach('netwin');
+  }else{
+    winStreak(false);
+  }
   addGlow('#ffd23f',0.6,2.2);
   celebrate(byElim?0.5:1);
   if(!stamps.some(s=>s.txt==='50!!')) addStamp('WIN!','#ffd23f');
@@ -2053,6 +2368,7 @@ function winGame(pl,byElim){
     ? (pl.team?'相手チームが失格したため勝利です':'他のプレイヤーが全員失格したため勝利です')
     : '50点ちょうどで上がり（'+(pl.team?'チーム':'')+pl.throws+'投）';
   fillFinals();
+  dailyFinish();
   setTimeout(()=>{ if(state==='win') $('ovEnd').hidden=false; }, byElim?900:2400);
 }
 function allOut(){
@@ -2067,6 +2383,7 @@ function allOut(){
     $('endSub').textContent='3回連続ミスでゲーム終了です。';
   }
   fillFinals();
+  dailyFinish();
   $('ovEnd').hidden=false;
 }
 function fillFinals(){
@@ -2077,11 +2394,17 @@ function fillFinals(){
     d.innerHTML='<span>'+esc(nm)+(p.out?'【失格】':'')+'</span><b>'+p.score+'点 / '+p.throws+'投</b>';
     list.appendChild(d);
   });
-  $('endMeta').textContent='難易度 '+diffLabel()+' ／ '+courtLabel();
+  $('endMeta').textContent=tsume
+    ? 'つめモルック・規定'+tsume.stage.par+'投'
+    : '難易度 '+diffLabel()+' ／ '+courtLabel();
+  const bn=$('btnTsumeNext');
+  if(bn) bn.hidden=!(tsume&&state==='win'&&tsumeStages[tsume.idx+1]);
   const ba=$('btnAgain');
   if(Net.active){
     if(Net.isHost){ ba.disabled=false; ba.textContent='再戦する（同じ部屋）'; }
     else{ ba.disabled=true; ba.textContent='部屋主の再戦待ち…'; }
+  }else if(tsume){
+    ba.disabled=false; ba.textContent='この問題をもう一回';
   }else{
     ba.disabled=false; ba.textContent='同じ設定でもう一度';
   }
@@ -3030,7 +3353,7 @@ function newGame(){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog(); throwLog=[];
+  clearLog(); throwLog=[]; shareKey=null; gamePita=0;
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach();
   renderBoard();
@@ -3043,7 +3366,7 @@ function newGame(){
 }
 function goHome(){
   $('ovEnd').hidden=true; $('ovStart').hidden=false; state='setup';
-  celebT=0; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; cpuPlan=null;
+  celebT=0; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; cpuPlan=null; dailyMode=false; tsume=null;
   setMode('full');
   btnGo.disabled=true; paintBtn(null); btnGo.textContent='スタートしてください';
   btnBack.hidden=true;
@@ -3084,9 +3407,216 @@ document.querySelectorAll('.tin').forEach(inp=>{
     teamCache[+inp.dataset.t][+inp.dataset.i]=inp.value;
   });
 });
-$('btnStart').addEventListener('click',()=>{Snd.init(); newGame();});
-function buildShareText(){
-  const url=location.origin+location.pathname;
+$('btnStart').addEventListener('click',()=>{Snd.init(); dailyMode=false; tsume=null; newGame();});
+$('btnDaily').addEventListener('click',()=>{ Snd.init(); openTsume(); });
+$('btnTsumeBack').addEventListener('click',()=>{ $('ovTsume').hidden=true; });
+$('btnAch').addEventListener('click',()=>{
+  Snd.init();
+  $('achMine').textContent='現在の称号：'+currentTitle();
+  renderAchList();
+  $('ovAch').hidden=false;
+});
+$('btnAchBack').addEventListener('click',()=>{ $('ovAch').hidden=true; });
+$('tsumeList').addEventListener('click',e=>{
+  const row=e.target.closest('[data-ti]');
+  if(row){ Snd.init(); tsumeStart(+row.dataset.ti); }
+});
+$('btnTsumeNext').addEventListener('click',()=>{
+  Snd.init();
+  if(tsume&&tsumeStages[tsume.idx+1]) tsumeStart(tsume.idx+1);
+});
+$('btnDailyBack').addEventListener('click',()=>{ $('ovDaily').hidden=true; });
+$('btnDailyGo').addEventListener('click',()=>{
+  Snd.init();
+  dailyName=(($('dailyName').value)||'').trim().slice(0,8);
+  opts.mode='solo'; opts.n=1; opts.diff='normal'; opts.court='long';
+  segInit($('segMode'),'v','solo'); segInit($('segN'),'n',1);
+  segInit($('segD'),'v','normal'); segInit($('segC'),'v','long');
+  renderModeUI();
+  dailyMode=true;
+  $('ovDaily').hidden=true;
+  newGame();
+});
+function tsumeBestMap(){
+  try{ return JSON.parse(localStorage.getItem('komorebi_tsume_v1')||'{}'); }catch(_){ return {}; }
+}
+function tsumeSaveBest(id,th){
+  try{
+    const m=tsumeBestMap();
+    if(!(m[id]<=th)) m[id]=th;
+    localStorage.setItem('komorebi_tsume_v1',JSON.stringify(m));
+  }catch(_){ }
+}
+function renderTsumeList(){
+  const box=$('tsumeList'); if(!box) return;
+  const best=tsumeBestMap();
+  box.innerHTML=tsumeStages.map((st,i)=>{
+    const b=best[st.id];
+    return '<div class="fr" data-ti="'+i+'" style="cursor:pointer'+(b?';border-color:var(--good)':'')+'">'
+      +'<span>第'+(i+1)+'問 '+esc(st.title)+'</span><b>'
+      +(b?('ベスト'+b+'投'):('規定'+st.par+'投'))+'</b></div>';
+  }).join('');
+}
+async function openTsume(){
+  $('ovTsume').hidden=false;
+  renderTsumeList();
+  if(!tsumeExtraLoaded){
+    tsumeExtraLoaded=true;
+    const ok=await Net.boot();
+    if(ok===true){
+      try{
+        const sn=await Net.db('challenges').once('value');
+        const val=sn.val()||{};
+        for(const [id,v] of Object.entries(val)){
+          if(!v||tsumeStages.some(st=>st.id===id)) continue;
+          const pins=Array.isArray(v.pins)?v.pins:Object.values(v.pins||{});
+          const ok2=pins.length>=1&&pins.length<=12&&pins.every(q=>q&&q.n>=1&&q.n<=12&&isFinite(q.x)&&isFinite(q.y));
+          const sc=v.sc|0, par=v.par|0;
+          if(!ok2||sc<0||sc>49||par<1||par>5) continue;
+          tsumeStages.push({
+            id, title:String(v.title||'おまけ問題').slice(0,12), sc, par,
+            pins:pins.map(q=>({n:q.n|0, x:clamp(+q.x,-2,2), y:clamp(+q.y,1,10.4)}))
+          });
+        }
+        renderTsumeList();
+      }catch(_){ }
+    }
+  }
+}
+function tsumeStart(i){
+  const st=tsumeStages[i]; if(!st) return;
+  dailyMode=false;
+  opts.mode='solo'; opts.n=1; opts.diff='normal'; opts.court='long';
+  segInit($('segMode'),'v','solo'); segInit($('segN'),'n',1);
+  segInit($('segD'),'v','normal'); segInit($('segC'),'v','long');
+  renderModeUI();
+  tsume={idx:i, stage:st};
+  $('ovTsume').hidden=true;
+  C=COURTS.long;
+  makeSides();
+  pins=st.pins.map(q=>({n:q.n,x:q.x,y:q.y,vx:0,vy:0,state:'stand',knocked:false,wob:0,stand:1,lie:0,riseAt:0,pop:0}));
+  players[0].score=st.sc;
+  makeForest();
+  particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
+  rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
+  shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
+  clearLog(); throwLog=[]; shareKey=null; gamePita=0;
+  $('ovStart').hidden=true; $('ovEnd').hidden=true;
+  computeReach(); renderBoard(); resize();
+  requestAnimationFrame(()=>{
+    measureBand();
+    const t=camTargets(); scale=t.sc; camY=t.cy;
+    enterAimDir(true);
+  });
+}
+function tsumeWin(){
+  state='win'; goldPin=0; setMode('end'); renderBoard();
+  btnGo.disabled=true; paintBtn(null); btnBack.hidden=true;
+  Snd.win();
+  addGlow('#ffd23f',0.6,1.6);
+  celebrate(0.6);
+  const th=players[0].throws, st=tsume.stage;
+  tsumeSaveBest(st.id,th);
+  ach('tsume1');
+  const bm=tsumeBestMap();
+  const cleared=TSUME_BUILTIN.filter(b2=>bm[b2.id]).length;
+  if(cleared>=5) ach('tsume5');
+  if(cleared>=10) ach('tsume10');
+  if(cleared>=TSUME_BUILTIN.length) ach('tsumeAll');
+  $('endEmoji').textContent='🎯';
+  $('endTitle').textContent='第'+(tsume.idx+1)+'問 クリア！';
+  $('endSub').textContent=st.title+'を'+th+'投で正解（規定'+st.par+'投）';
+  fillFinals();
+  setTimeout(()=>{ if(state==='win') $('ovEnd').hidden=false; },1800);
+}
+function tsumeLose(reason){
+  state='over'; goldPin=0; setMode('end'); renderBoard();
+  btnGo.disabled=true; paintBtn(null); btnBack.hidden=true;
+  $('endEmoji').textContent='😵';
+  $('endTitle').textContent='第'+(tsume.idx+1)+'問 しっぱい…';
+  $('endSub').textContent=tsume.stage.title+'。'+reason;
+  fillFinals();
+  setTimeout(()=>{ if(state==='over') $('ovEnd').hidden=false; },1100);
+}
+function dailyKey(){
+  const d=new Date(Date.now()+9*3600*1000);
+  const m=('0'+(d.getUTCMonth()+1)).slice(-2), dd=('0'+d.getUTCDate()).slice(-2);
+  return d.getUTCFullYear()+'-'+m+'-'+dd;
+}
+function dailyDateLabel(){
+  const d=new Date(Date.now()+9*3600*1000);
+  return (d.getUTCMonth()+1)+'月'+d.getUTCDate()+'日';
+}
+async function openDaily(){
+  $('ovDaily').hidden=false;
+  $('dailyDate').textContent=dailyDateLabel();
+  $('dailyRank').innerHTML='<div class="fr"><span>よみこみ中…</span><b></b></div>';
+  $('dailyMine').textContent='';
+  if(dailyName) $('dailyName').value=dailyName;
+  const ok=await Net.boot();
+  if(ok!==true){
+    $('dailyRank').innerHTML='<div class="fr"><span>ランキングはオンラインで表示されます</span><b></b></div>';
+    $('dailyMine').textContent='';
+    $('btnDailyGo').textContent='オフラインで挑戦（記録は残りません）';
+    return;
+  }
+  let val={};
+  try{
+    const sn=await Net.db('daily/'+dailyKey()).once('value');
+    val=sn.val()||{};
+  }catch(_){ }
+  const mine=val[Net.uid];
+  const arr=Object.entries(val).map(([uid,v])=>({
+    uid, nm:((v&&v.nm)||'？').slice(0,8),
+    th:(v&&v.f)?999:((v&&v.th)|0), f:(v&&v.f)?1:0, t:(v&&v.t)||0
+  }));
+  arr.sort((a,b)=>a.th-b.th||a.t-b.t);
+  const rows=arr.slice(0,10).map((e,i)=>
+    '<div class="fr"'+(e.uid===Net.uid?' style="border-color:var(--red)"':'')+'><span>'+(i+1)+'位 '+esc(e.nm)+'</span><b>'+(e.f?'しっかく':e.th+'投')+'</b></div>'
+  ).join('');
+  $('dailyRank').innerHTML=rows||'<div class="fr"><span>まだ記録がありません。いちばん乗りのチャンス</span><b></b></div>';
+  const myIdx=arr.findIndex(e=>e.uid===Net.uid);
+  if(mine){
+    $('dailyMine').textContent='きょうのあなたの公式記録：'+(mine.f?'しっかく':((mine.th|0)+'投'))+(myIdx>=0?'（'+(myIdx+1)+'位／'+arr.length+'人）':'');
+    $('btnDailyGo').textContent='練習でもう一回あそぶ';
+  }else{
+    $('dailyMine').textContent='きょうはまだ未挑戦です。最初の1回が公式記録になります';
+    $('btnDailyGo').textContent='公式記録に挑戦する';
+  }
+}
+async function dailyFinish(){
+  if(!dailyMode||Net.active||players.length!==1) return;
+  const win=state==='win';
+  const th=players[0].throws;
+  const meta=$('endMeta');
+  const ok=await Net.boot();
+  if(ok!==true){
+    if(meta) meta.textContent+='｜きょうの一本・オフラインのため記録なし';
+    return;
+  }
+  try{
+    await Net.db('daily/'+dailyKey()+'/'+Net.uid).set({
+      nm:(dailyName||'あなた').slice(0,8),
+      th:win?th:0, f:win?0:1,
+      t:firebase.database.ServerValue.TIMESTAMP,
+      log:throwLog.slice(-24).join('')
+    });
+    if(meta) meta.textContent+='｜きょうの一本の公式記録として保存';
+  }catch(_){
+    if(meta) meta.textContent+='｜きょうの一本・練習（公式記録は本日分すみ）';
+  }
+}
+function computeShareParts(){
+  if(tsume){
+    const head=state==='win'
+      ? players[0].throws+'投で正解！（規定'+tsume.stage.par+'投）'
+      : 'しっぱい…';
+    return {tag:'つめモルック・第'+(tsume.idx+1)+'問 '+tsume.stage.title, head, scoreLines:[], line:throwLog.slice(-24).join('')};
+  }
+  if(dailyMode&&!Net.active&&players.length===1){
+    const head=state==='win'?players[0].throws+'投でクリア！':'3連続ミスでしっかく…';
+    return {tag:'きょうの一本・'+dailyDateLabel(), head, scoreLines:[], line:throwLog.slice(-24).join('')};
+  }
   const modeTxt=Net.active?'通信対戦':(players.some(p=>p.cpu)?'CPU対戦':(players.length>1?'みんなで対戦':'ひとりで'));
   const tag=[modeTxt,diffLabel(),opts.court==='short'?'コンパクト':''].filter(Boolean).join('・');
   const w=players.find(p=>p.score===50)||players.filter(p=>!p.out)[0]||players[0];
@@ -3103,27 +3633,132 @@ function buildShareText(){
   }else{
     head=players.length===1?'3連続ミスでしっかく…':'全員しっかくで終了…';
   }
-  const score=players.length>1
-    ? players.map(p=>p.name+' '+p.score+'点'+(p.out?'（失格）':'')).join(' ／ ')+'\n'
-    : '';
+  const scoreLines=players.length>1
+    ? players.map(p=>p.name+'　'+p.score+'点'+(p.out?'（失格）':''))
+    : [];
   const line=throwLog.slice(-24).join('');
-  return 'こもれびモルック（'+tag+'）\n'+head+'\n'+score+(line?line+'\n':'')+url;
+  return {tag,head,scoreLines,line};
+}
+function buildShareText(key){
+  const p=computeShareParts();
+  const url=location.origin+location.pathname+(key?'?v='+key:'');
+  const score=p.scoreLines.length?p.scoreLines.join(' ／ ')+'\n':'';
+  const tt=currentTitle();
+  const ttl=(tt&&tt!=='かけだし')?'称号：'+tt+'\n':'';
+  return 'こもれびモルック（'+p.tag+'）\n'+p.head+'\n'+score+(p.line?p.line+'\n':'')+ttl+url;
+}
+async function saveResult(){
+  try{
+    const ok=await Net.boot();
+    if(ok!==true) return null;
+    const parts=computeShareParts();
+    const ref=firebase.database().ref('results').push();
+    await ref.set({
+      t:firebase.database.ServerValue.TIMESTAMP,
+      tag:parts.tag, head:parts.head,
+      sc:players.map(p2=>({n:p2.name, s:p2.score, o:p2.out?1:0})),
+      log:throwLog.slice(-30).join(''),
+      w:state==='win'?1:0
+    });
+    return ref.key;
+  }catch(_){ return null; }
+}
+function rr2(x,a,b,w,h,r){
+  x.beginPath();
+  x.moveTo(a+r,b);
+  x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r);
+  x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r);
+  x.closePath();
+}
+function makeShareImage(parts){
+  return new Promise(res=>{
+    try{
+      const W=1080,H=1080;
+      const c=document.createElement('canvas'); c.width=W; c.height=H;
+      const x=c.getContext('2d');
+      x.fillStyle='#f7f1e3'; x.fillRect(0,0,W,H);
+      x.textAlign='center'; x.textBaseline='alphabetic';
+      x.fillStyle='#e8836e';
+      x.font='400 66px "Yusei Magic","Zen Maru Gothic",sans-serif';
+      x.fillText('こもれびモルック',W/2,128);
+      x.fillStyle='#98866f';
+      x.font='700 38px "Zen Maru Gothic",sans-serif';
+      x.fillText(parts.tag,W/2,188);
+      const px0=70,py0=235,pw=W-140,ph=575;
+      x.fillStyle='#79b58a';
+      rr2(x,px0,py0,pw,ph,36); x.fill();
+      x.strokeStyle='rgba(255,255,255,0.8)'; x.lineWidth=6;
+      rr2(x,px0+22,py0+22,pw-44,ph-44,26); x.stroke();
+      let fs=62;
+      x.font='400 '+fs+'px "Yusei Magic","Zen Maru Gothic",sans-serif';
+      while(fs>32&&x.measureText(parts.head).width>pw-120){
+        fs-=3;
+        x.font='400 '+fs+'px "Yusei Magic","Zen Maru Gothic",sans-serif';
+      }
+      x.lineJoin='round';
+      x.strokeStyle='rgba(50,75,55,0.55)'; x.lineWidth=9;
+      x.strokeText(parts.head,W/2,py0+128);
+      x.fillStyle='#ffffff';
+      x.fillText(parts.head,W/2,py0+128);
+      x.font='700 40px "Zen Maru Gothic",sans-serif';
+      let yy=py0+205;
+      for(const ln of parts.scoreLines.slice(0,4)){
+        x.fillText(ln,W/2,yy); yy+=52;
+      }
+      const arr=Array.from(parts.line||'');
+      x.font='400 54px sans-serif';
+      yy+=28;
+      for(let i=0;i<arr.length&&yy<py0+ph-30;i+=12){
+        x.fillText(arr.slice(i,i+12).join(''),W/2,yy);
+        yy+=72;
+      }
+      x.fillStyle='#98866f'; x.font='700 34px "Zen Maru Gothic",sans-serif';
+      x.fillText(parts.date||'',W/2,900);
+      x.fillStyle='#5b473a'; x.font='700 36px "Zen Maru Gothic",sans-serif';
+      x.fillText((parts.url||'').replace(/^https?:\/\//,''),W/2,956);
+      if(parts.verified){
+        x.fillStyle='#5f9e72'; x.font='700 31px "Zen Maru Gothic",sans-serif';
+        x.fillText('達成時にアプリが自動保存した公式記録',W/2,1010);
+      }
+      c.toBlob(b=>res(b),'image/png');
+    }catch(_){ res(null); }
+  });
 }
 $('btnShare').addEventListener('click',async()=>{
   Snd.init();
-  const t=buildShareText();
+  const btn=$('btnShare');
+  btn.textContent='記録を保存中…';
+  if(!shareKey) shareKey=await saveResult();
+  const parts=computeShareParts();
+  parts.date=new Date().toLocaleString('ja-JP',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  parts.url=location.origin+location.pathname+(shareKey?'?v='+shareKey:'');
+  parts.verified=!!shareKey;
+  const text=buildShareText(shareKey);
+  const blob=await makeShareImage(parts);
+  btn.textContent='けっかをシェア';
   try{
-    if(navigator.share){
-      await navigator.share({text:t});
-    }else{
-      await navigator.clipboard.writeText(t);
-      $('btnShare').textContent='コピーしました！';
-      setTimeout(()=>{ $('btnShare').textContent='けっかをシェア'; },1800);
+    if(blob&&navigator.canShare){
+      const f=new File([blob],'komorebi-molkky.png',{type:'image/png'});
+      if(navigator.canShare({files:[f]})){
+        await navigator.share({files:[f], text});
+        return;
+      }
     }
+    if(navigator.share){ await navigator.share({text}); return; }
+    await navigator.clipboard.writeText(text);
+    if(blob){
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='komorebi-molkky.png';
+      a.click();
+    }
+    btn.textContent='コピー＆画像保存！';
+    setTimeout(()=>{ btn.textContent='けっかをシェア'; },1800);
   }catch(_){ }
 });
 $('btnAgain').addEventListener('click',()=>{
   Snd.init();
+  if(tsume){ tsumeStart(tsume.idx); return; }
   if(Net.active){
     if(Net.isHost&&Net.code){ Net.db('rooms/'+Net.code).update({rd:(Net.rdSeen|0)+1, fo:(Math.random()*1000)|0}); }
     return;
@@ -3134,6 +3769,7 @@ $('btnToSetup').addEventListener('click',()=>{ if(Net.active) Net.leave(); goHom
 $('btnRules').addEventListener('click',()=>{
   $('side').scrollIntoView({behavior:'smooth'});
 });
+$('btnBgm').addEventListener('click',()=>{ Bgm.toggle(); });
 $('btnSnd').addEventListener('click',()=>{
   Snd.init(); Snd.on=!Snd.on;
   $('btnSnd').textContent=Snd.on?'🔊':'🔇';
@@ -3224,6 +3860,21 @@ $('btnJoinRoom').addEventListener('click',async()=>{
       :netDbErr(e,'入室できませんでした。通信環境を確認してください'));
   }
 });
+async function showVerify(key){
+  const ok=await Net.boot();
+  if(ok!==true) return;
+  try{
+    const sn=await Net.db('results/'+key).once('value');
+    if(!sn.exists()) return;
+    const v=sn.val()||{};
+    $('vfMeta').textContent=(v.t?new Date(v.t).toLocaleString('ja-JP'):'')+(v.tag?'　'+v.tag:'');
+    $('vfHead').textContent=v.head||'';
+    $('vfScore').innerHTML=(v.sc||[]).map(e=>'<div class="fr"><span>'+esc(e&&e.n)+((e&&e.o)?'（失格）':'')+'</span><b>'+((e&&e.s)|0)+'点</b></div>').join('');
+    $('vfLog').textContent=v.log||'';
+    $('ovVerify').hidden=false;
+  }catch(_){ }
+}
+$('btnVfPlay').addEventListener('click',()=>{ $('ovVerify').hidden=true; });
 $('btnInvite').addEventListener('click',async()=>{
   if(!Net.code) return;
   const u=location.origin+location.pathname+'?r='+Net.code;
@@ -3266,13 +3917,19 @@ setMode('full');
 resize();
 requestAnimationFrame(()=>{ measureBand(); const t=camTargets(); scale=t.sc; camY=t.cy; });
 msg('形式と難易度を選んでスタート');
+updateTitleUi();
+if(!Bgm.on){ const b=$('btnBgm'); if(b) b.style.opacity='0.4'; }
 try{
-  const rq=new URLSearchParams(location.search).get('r');
+  const qs=new URLSearchParams(location.search);
+  const rq=qs.get('r');
+  const vq=qs.get('v');
   if(rq&&/^[A-Za-z0-9]{4}$/.test(rq)){
     openNetPanel();
     $('netCodeIn').value=rq.toUpperCase();
     netStatus('さそいコードが入っています。なまえを入れて入室してください');
     Net.boot().then(ok=>{ if(ok!==true) netStatus(netBootMsg(ok)); });
+  }else if(vq&&/^[-\w]{8,40}$/.test(vq)){
+    showVerify(vq);
   }
 }catch(_){ }
 requestAnimationFrame(loop);
