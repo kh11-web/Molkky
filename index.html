@@ -762,8 +762,11 @@ function camTargets(){
 }
 function resize(){
   dpr=Math.min(2,window.devicePixelRatio||1);
-  const top=elStage.getBoundingClientRect().top;
-  const stageH=Math.max(440, window.innerHeight - top - 14);
+  const rect=elStage.getBoundingClientRect();
+  const absTop=rect.top+Math.max(0,window.scrollY||window.pageYOffset||0);
+  const vv=window.visualViewport;
+  const vpH=(vv&&vv.height)||window.innerHeight;
+  const stageH=Math.max(420, Math.round(vpH-absTop-14));
   elStage.style.height=stageH+'px';
   cw=elStage.clientWidth;
   ch=elStage.clientHeight;
@@ -2142,6 +2145,10 @@ $('btnHome').addEventListener('click',()=>{
   }
 });
 window.addEventListener('resize',resize);
+if(window.visualViewport) window.visualViewport.addEventListener('resize',resize);
+window.addEventListener('orientationchange',()=>setTimeout(resize,300));
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>resize());
+setTimeout(resize,450);
 
 /* ================= 起動 ================= */
 resetPins();
