@@ -526,7 +526,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
     <button class="bigbtn" id="btnStart">ゲームスタート</button>
     <button class="bigbtn" id="btnDaily" style="margin-top:9px; background:var(--good);">つめモルック（詰め問題に挑戦）</button>
     <button class="subbtn" id="btnNet">通信対戦（部屋コードで2〜4人）</button>
-    <button class="subbtn" id="btnAch">じっせき・称号</button>
+    <button class="subbtn" id="btnAch">プロフィール・じっせき</button>
     <p class="lead" id="myTitle" style="text-align:center; margin:8px 0 0;"></p>
   </div>
 </div>
@@ -537,7 +537,8 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
     <div class="trophy" id="endEmoji">🏆</div>
     <h2 id="endTitle"></h2>
     <p id="endSub"></p>
-    <p class="lead" id="endMeta" style="margin:0 0 10px"></p>
+    <p class="lead" id="endMeta" style="margin:0 0 6px"></p>
+    <p class="lead" id="endTrail" style="margin:0 0 10px; word-break:break-all;"></p>
     <div class="finals" id="endList"></div>
     <button class="subbtn" id="btnShare">けっかをシェア</button>
     <button class="subbtn" id="btnTsumeNext" hidden>つぎの問題へ</button>
@@ -581,8 +582,12 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 
 <div class="ov" id="ovAch" hidden>
   <div class="card">
-    <h2><b>じっせき・称号</b></h2>
-    <p class="lead" id="achMine"></p>
+    <h2><b>プロフィール・じっせき</b></h2>
+    <div><span class="optlabel">なまえ（結果や記録に使われます）</span></div>
+    <input class="nameIn" id="profNameIn" maxlength="8" placeholder="あなた">
+    <div style="margin-top:8px"><span class="optlabel">称号（かいほう済みから選ぶ）</span></div>
+    <div class="finals" id="titlePick"></div>
+    <p class="lead" id="achMine" style="margin-top:8px"></p>
     <div class="finals" id="achList"></div>
     <button class="subbtn" id="btnAchBack">もどる</button>
   </div>
@@ -618,7 +623,8 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
     <p class="lead" id="vfMeta"></p>
     <p id="vfHead" style="font-family:var(--fh); font-size:20px; margin:2px 0 8px;"></p>
     <div class="finals" id="vfScore"></div>
-    <div id="vfLog" style="font-size:22px; letter-spacing:2px; margin:4px 0 10px; word-break:break-all;"></div>
+    <div id="vfLog" style="font-size:22px; letter-spacing:2px; margin:4px 0 6px; word-break:break-all;"></div>
+    <p class="lead" id="vfTrail" style="margin:0 0 10px; word-break:break-all;"></p>
     <p class="lead">この記録は、達成した瞬間にこもれびモルックが自動保存したものです。あとから書き換えることはできません。</p>
     <button class="bigbtn" id="btnVfPlay">じぶんも遊ぶ</button>
   </div>
@@ -710,8 +716,13 @@ let punchT=0, punchD=0.3, punchX=0, punchY=0, punchZ=1;
 let glow={life:0,max:0.5,col:'255,210,63',a:0};
 let ilines=[], pillars=[];
 let logEntries=[];
-let throwLog=[], shareKey=null;
+let throwLog=[], shareKey=null, scoreTrail=[];
 let dailyMode=false, dailyName='';
+let profName='', profTitle='';
+try{
+  profName=(localStorage.getItem('komorebi_name')||'').slice(0,8);
+  profTitle=localStorage.getItem('komorebi_title')||'';
+}catch(_){ }
 let tsume=null;
 const TSUME_BUILTIN=[
  {id:'b01', title:'まずは一本', sc:49, par:1, pins:[{n:1,x:0,y:4.2}]},
@@ -738,13 +749,14 @@ const TSUME_BUILTIN=[
 let tsumeStages=TSUME_BUILTIN.slice();
 let tsumeExtraLoaded=false;
 let gamePita=0;
+let gameGripSet=new Set(), gameArcSet=new Set(), gameAllPerfect=true, gameAllMulti=true;
 const ACH=[
- {id:'win1',    tier:1, nm:'はじめての勝利',       tt:'もりの新人',     ds:'どのモードでもいいので1勝する'},
+ {id:'win1',    tier:1, nm:'はじめての勝利',       tt:'もりの新人',     ds:'対戦（CPU・みんなで・通信）で1勝する'},
  {id:'tsume1',  tier:1, nm:'はじめての詰め',       tt:'見習い解き手',   ds:'つめモルックを1問クリアする'},
- {id:'snipe',   tier:2, nm:'はじめての狙撃',       tt:'狙撃見習い',     ds:'対戦か練習で、10番以上のピンを単独で倒す'},
+ {id:'snipe',   tier:2, nm:'はじめての狙撃',       tt:'狙撃見習い',     ds:'対戦で、10番以上のピンを単独で倒す'},
  {id:'netwin',  tier:2, nm:'つながる森',           tt:'旅する投手',     ds:'通信対戦で勝つ'},
  {id:'teamwin', tier:2, nm:'なかまと一勝',         tt:'たよれる相棒',   ds:'チーム戦で勝つ'},
- {id:'mow5',    tier:2, nm:'五本薙ぎ',             tt:'草刈り名人',     ds:'対戦か練習で、1投で5本以上倒す'},
+ {id:'mow5',    tier:2, nm:'五本薙ぎ',             tt:'草刈り名人',     ds:'対戦で、1投で5本以上倒す'},
  {id:'fifty',   tier:3, nm:'50ぴったり',           tt:'ぴったり職人',   ds:'50点ちょうどで上がる'},
  {id:'perfect3',tier:3, nm:'三連PERFECT',          tt:'精密機械',       ds:'1試合でPERFECTを3回出す'},
  {id:'vs5',     tier:3, nm:'めちゃつよ討伐',       tt:'森の実力者',     ds:'めちゃつよCPUに勝つ'},
@@ -752,7 +764,7 @@ const ACH=[
  {id:'streak3', tier:3, nm:'三連勝',               tt:'連勝街道',       ds:'負けなしで3連勝する'},
  {id:'win10',   tier:3, nm:'通算10勝',             tt:'常連プレイヤー', ds:'合計10回勝つ'},
  {id:'tsume5',  tier:3, nm:'つめ五番勝負',         tt:'解き手',         ds:'つめモルックを5問クリアする'},
- {id:'mow7',    tier:4, nm:'七本薙ぎ',             tt:'伝説の薙ぎ手',   ds:'対戦か練習で、1投で7本以上倒す'},
+ {id:'mow7',    tier:4, nm:'七本薙ぎ',             tt:'伝説の薙ぎ手',   ds:'対戦で、1投で7本以上倒す'},
  {id:'phoenix', tier:4, nm:'ドボンからの逆転',     tt:'不死鳥',         ds:'25点戻りを経験した試合で勝つ'},
  {id:'kami',    tier:4, nm:'かみ討伐',             tt:'神をこえし者',   ds:'かみCPUに勝つ'},
  {id:'snipe10', tier:4, nm:'狙撃十番',             tt:'森の狙撃手',     ds:'単独の10番以上を通算10回決める'},
@@ -762,6 +774,14 @@ const ACH=[
  {id:'speed5',  tier:5, nm:'5投じまい',            tt:'しっぷうのごとく', ds:'5投以内の50点ぴったりで勝つ'},
  {id:'win50',   tier:5, nm:'通算50勝',             tt:'もりの重鎮',     ds:'合計50回勝つ'},
  {id:'tsumeAll',tier:5, nm:'つめ全問クリア',       tt:'詰めの達人',     ds:'内蔵の全問をクリアする'},
+ {id:'allMulti', tier:5, nm:'薙ぎ通し',             tt:'薙ぎ続ける者',   ds:'全投2本以上倒して50点上がりで勝つ（ふつう以上のCPU戦か通信対戦）'},
+ {id:'tateOnly', tier:5, nm:'タテしばり',           tt:'縦一文字',       ds:'タテ持ちだけで50点上がりで勝つ（ふつう以上のCPU戦か通信対戦）'},
+ {id:'backOnly', tier:5, nm:'逆回転しばり',         tt:'止めの名手',     ds:'逆回転だけで50点上がりで勝つ（ふつう以上のCPU戦か通信対戦）'},
+ {id:'lahti',    tier:5, nm:'ラハティしばり',       tt:'ラハティの申し子', ds:'低めのラハティ投げだけで50点上がりで勝つ（ふつう以上のCPU戦か通信対戦）'},
+ {id:'allPerfect',tier:6,nm:'全投PERFECT',          tt:'ぜんぶど真ん中', ds:'全投PERFECTで50点上がりで勝つ（ふつう以上のCPU戦か通信対戦）'},
+ {id:'mow12',    tier:6, nm:'十二本薙ぎ',           tt:'もりのあらし',   ds:'1投で12本すべて倒す（ふつう以上のCPU戦か通信対戦）'},
+ {id:'snipe100', tier:6, nm:'狙撃百発',             tt:'百発百中',       ds:'条件下の単独スナイプを通算100回決める（ふつう以上のCPU戦か通信対戦）'},
+ {id:'mow100',   tier:6, nm:'五本薙ぎ百回',         tt:'草原の王',       ds:'条件下の5本薙ぎを通算100回決める（ふつう以上のCPU戦か通信対戦）'},
  {id:'nushiHard',tier:6,nm:'真・ぬし討伐',         tt:'しんのぬし',     ds:'むずかしい・公式コートでもりのぬしに勝つ'}
 ];
 function incCount(key){
@@ -783,9 +803,22 @@ function achMap(){
 }
 function currentTitle(){
   const m=achMap();
+  if(profTitle&&m[profTitle]){
+    const a=ACH.find(x=>x.id===profTitle);
+    if(a) return a.tt;
+  }
   let best=null;
   for(const a of ACH){ if(m[a.id]&&(!best||a.tier>best.tier)) best=a; }
   return best?best.tt:'かけだし';
+}
+function renderTitlePick(){
+  const box=$('titlePick'); if(!box) return;
+  const m=achMap();
+  const rows=[{id:'',tt:'自動（いちばん上の称号）'}].concat(ACH.filter(a=>m[a.id]));
+  box.innerHTML=rows.map(r=>{
+    const on=(profTitle||'')===r.id;
+    return '<div class="fr" data-tt="'+r.id+'" style="cursor:pointer'+(on?';border-color:var(--red)':'')+'"><span>'+esc(r.tt)+'</span><b>'+(on?'✔':'')+'</b></div>';
+  }).join('');
 }
 function updateTitleUi(){
   const el=$('myTitle');
@@ -830,6 +863,15 @@ function bumpWins(){
     if(w>=10) ach('win10');
     if(w>=50) ach('win50');
   }catch(_){ }
+}
+function achMine(pl){
+  if(tsume||dailyMode) return false;
+  if(players.length<2) return false;
+  if(Net.active) return pl.team ? !!(pl.uids&&pl.uids.includes(Net.uid)) : pl.uid===Net.uid;
+  return !pl.cpu;
+}
+function achHardOk(){
+  return !tsume&&!dailyMode&&opts.diff!=='easy'&&(Net.active||opts.mode==='cpu');
 }
 function iWonAch(pl){
   if(Net.active){
@@ -1303,7 +1345,11 @@ function netPanelMode(m){
   $('netWait').style.display  = m==='entry'?'none':'';
   $('btnNetStart').style.display = m==='hosting'?'':'none';
 }
-function openNetPanel(){ $('ovNet').hidden=false; netPanelMode('entry'); }
+function openNetPanel(){
+  try{
+    const ni=document.getElementById('netNameIn')||document.querySelector('#ovNet input.nameIn');
+    if(ni&&!ni.value&&profName) ni.value=profName;
+  }catch(_){ } $('ovNet').hidden=false; netPanelMode('entry'); }
 function renderNetRoster(){
   const box=$('netRoster'); if(!box) return;
   const arr=Object.values(Net.roster).sort((a,b)=>((a&&a.ja)||0)-((b&&b.ja)||0));
@@ -1485,7 +1531,7 @@ function netNewGameInner(){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog(); throwLog=[]; shareKey=null; gamePita=0;
+  clearLog(); throwLog=[]; shareKey=null; scoreTrail=[]; gamePita=0; gameGripSet=new Set(); gameArcSet=new Set(); gameAllPerfect=true; gameAllMulti=true;
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach();
   renderBoard();
@@ -1620,14 +1666,15 @@ function makeSides(){
     });
   }else if(opts.mode==='cpu'){
     const lvName={vweak:'めちゃよわCPU',weak:'よわいCPU',normal:'ふつうCPU',strong:'つよいCPU',vstrong:'めちゃつよCPU',oni:'おにCPU',kami:'かみCPU',nushi:'もりのぬし'}[opts.cpu];
-    const me={name:'あなた', members:['あなた'], mIdx:0, team:false,
+    const meNm=profName||'あなた';
+    const me={name:meNm, members:[meNm], mIdx:0, team:false,
        score:0, miss:0, out:false, throws:0, col:PCOL[0], hex:PCOLHEX[0]};
     const bot={name:lvName, members:[lvName], mIdx:0, team:false, cpu:true,
        score:0, miss:0, out:false, throws:0, col:PCOL[1], hex:PCOLHEX[1]};
     players=[me,bot];
   }else{
     players=Array.from({length:opts.n},(_,i)=>{
-      const nm=opts.n===1?((dailyMode&&dailyName)?dailyName:'あなた'):((namesCache[i]&&namesCache[i].trim())||'プレイヤー'+(i+1));
+      const nm=opts.n===1?((dailyMode&&dailyName)?dailyName:(profName||'あなた')):((namesCache[i]&&namesCache[i].trim())||'プレイヤー'+(i+1));
       return {name:nm, members:[nm], mIdx:0, team:false,
         score:0, miss:0, out:false, throws:0, col:PCOL[i], hex:PCOLHEX[i]};
     });
@@ -1878,7 +1925,7 @@ function lockDirection(){
     dirLocked=baseAng;
     Snd.pita();
     gamePita++;
-    if(!tsume){
+    if(!tsume&&!dailyMode&&players.length>=2){
       if(gamePita>=3) ach('perfect3');
       if(incCount('komorebi_pitas')>=50) ach('pita50');
     }
@@ -1891,6 +1938,7 @@ function lockDirection(){
     addFloat(LAUNCH.x+Math.cos(dirLocked)*1.0, LAUNCH.y+Math.sin(dirLocked)*1.0,'PERFECT!','#ffd23f',true);
     burst(LAUNCH.x+Math.cos(dirLocked)*0.55, LAUNCH.y+Math.sin(dirLocked)*0.55,10);
   }else{
+    gameAllPerfect=false;
     dirLocked+=gauss()*0.4*DEG*c.scat;
     if(Math.abs(offDeg)<=c.pita*2.6){
       addFloat(LAUNCH.x+Math.cos(dirLocked)*0.9, LAUNCH.y+Math.sin(dirLocked)*0.9,'GREAT!','#bfe3ff',false);
@@ -2154,11 +2202,18 @@ function applyOutcome(o){
   ks.forEach(p=>{cx+=p.x; cy+=p.y;});
   if(ks.length){ cx/=ks.length; cy/=ks.length; }
   let text='', cls='';
+  const mineT=achMine(pl);
+  if(mineT){
+    gameGripSet.add(opts.grip);
+    gameArcSet.add(opts.arc);
+    if(ks.length<2) gameAllMulti=false;
+  }
   if(ks.length===0){
     pl.miss++;
     addStamp((!tsume&&pl.miss>=3)?'しっかく…':'MISS…', (!tsume&&pl.miss>=3)?'#ff8a7a':'#9fb2c4');
     Snd.miss();
     throwLog.push((!tsume&&pl.miss>=3)?'❌':'⚪');
+    scoreTrail.push({s:pl.score,k:0});
     if(!tsume&&pl.miss>=3){
       pl.out=true;
       Snd.bust();
@@ -2173,9 +2228,11 @@ function applyOutcome(o){
     const pts=ks.length===1?ks[0].n:ks.length;
     const ns=pl.score+pts;
     if(ks.length>=3){
-      if(!tsume){
+      if(mineT){
         if(ks.length>=5) ach('mow5');
         if(ks.length>=7) ach('mow7');
+        if(ks.length>=5&&achHardOk()&&incCount('komorebi_mow5_h')>=100) ach('mow100');
+        if(ks.length>=12&&achHardOk()) ach('mow12');
       }
       burst(cx,cy,ks.length>=5?34:18);
       addShake(ks.length>=5?4:2.5);
@@ -2190,9 +2247,10 @@ function applyOutcome(o){
       const nv=ks[0].n;
       addRingIn(cx,cy,'#ffd23f');
       if(nv>=10){
-        if(!tsume){
+        if(mineT){
           ach('snipe');
           if(incCount('komorebi_snipes')>=10) ach('snipe10');
+          if(achHardOk()&&incCount('komorebi_snipes_h')>=100) ach('snipe100');
         }
         slowT=0.5; hitstopT=0.05;
         burst(cx,cy,22,'gold');
@@ -2221,6 +2279,7 @@ function applyOutcome(o){
         addStamp('しっぱい…','#ff8a7a');
         Snd.bust();
         throwLog.push('🌀');
+        scoreTrail.push({s:ns,k:ks.length});
         pl.mIdx=(pl.mIdx+1)%pl.members.length;
         renderBoard();
         msg('+'+pts+'点で'+ns+'点。50点を超えたため失敗です','bad');
@@ -2234,6 +2293,7 @@ function applyOutcome(o){
       puff(cx,cy,16,'#b9b3a4');
       Snd.stamp(); Snd.bust();
       throwLog.push('🌀');
+      scoreTrail.push({s:25,k:ks.length});
       text='+'+pts+'点で'+ns+'点。50点を超えたので25点に戻ります'+leanNote; cls='warn';
       addLog(pl,'+'+pts+'で'+ns+'点 → 25点戻り');
     }else{
@@ -2241,6 +2301,7 @@ function applyOutcome(o){
       addStamp(ns===50?'50!!':'+'+pts, (ns===50||pts>=8)?'#ffd23f':'#ffffff');
       spawnCollects(ks.slice(0,12));
       throwLog.push(ns===50?'🏁':(ks.length>=5?'💥':(ks.length>=3?'✨':((ks.length===1&&ks[0].n>=7)?'🎯':'🟡'))));
+      scoreTrail.push({s:ns,k:ks.length});
       Snd.stamp();
       if(ks.length===1){
         text=ks[0].n+'番を単独で倒して +'+pts+'点（合計'+pl.score+'点）'+leanNote;
@@ -2337,7 +2398,8 @@ function winGame(pl,byElim){
   state='win'; goldPin=0; setMode('end'); renderBoard();
   btnGo.disabled=true; paintBtn(null); btnBack.hidden=true;
   Snd.win();
-  if(iWonAch(pl)){
+  const realMatch=players.length>=2&&!tsume&&!dailyMode;
+  if(realMatch&&iWonAch(pl)){
     ach('win1');
     bumpWins();
     if(winStreak(true)>=3) ach('streak3');
@@ -2345,6 +2407,13 @@ function winGame(pl,byElim){
     if(pl.hadBust) ach('phoenix');
     if(pl.team) ach('teamwin');
     if(!byElim&&pl.throws<=5) ach('speed5');
+    if(!byElim&&achHardOk()){
+      if(gameAllPerfect) ach('allPerfect');
+      if(gameAllMulti) ach('allMulti');
+      if(gameGripSet.size===1&&gameGripSet.has('tate')) ach('tateOnly');
+      if(gameGripSet.size===1&&gameGripSet.has('back')) ach('backOnly');
+      if(gameArcSet.size===1&&gameArcSet.has('low')) ach('lahti');
+    }
     if(!Net.active&&opts.mode==='cpu'){
       if(opts.cpu==='vstrong') ach('vs5');
       if(opts.cpu==='oni') ach('oni');
@@ -2355,7 +2424,7 @@ function winGame(pl,byElim){
       }
     }
     if(Net.active) ach('netwin');
-  }else{
+  }else if(realMatch){
     winStreak(false);
   }
   addGlow('#ffd23f',0.6,2.2);
@@ -2397,6 +2466,10 @@ function fillFinals(){
   $('endMeta').textContent=tsume
     ? 'つめモルック・規定'+tsume.stage.par+'投'
     : '難易度 '+diffLabel()+' ／ '+courtLabel();
+  const tr=$('endTrail');
+  if(tr){
+    tr.textContent=(players.length===1&&scoreTrail.length)?('スコア '+trailLine()):'';
+  }
   const bn=$('btnTsumeNext');
   if(bn) bn.hidden=!(tsume&&state==='win'&&tsumeStages[tsume.idx+1]);
   const ba=$('btnAgain');
@@ -3353,7 +3426,7 @@ function newGame(){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog(); throwLog=[]; shareKey=null; gamePita=0;
+  clearLog(); throwLog=[]; shareKey=null; scoreTrail=[]; gamePita=0; gameGripSet=new Set(); gameArcSet=new Set(); gameAllPerfect=true; gameAllMulti=true;
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach();
   renderBoard();
@@ -3412,9 +3485,24 @@ $('btnDaily').addEventListener('click',()=>{ Snd.init(); openTsume(); });
 $('btnTsumeBack').addEventListener('click',()=>{ $('ovTsume').hidden=true; });
 $('btnAch').addEventListener('click',()=>{
   Snd.init();
+  $('profNameIn').value=profName;
+  renderTitlePick();
   $('achMine').textContent='現在の称号：'+currentTitle();
   renderAchList();
   $('ovAch').hidden=false;
+});
+$('profNameIn').addEventListener('input',()=>{
+  profName=($('profNameIn').value||'').trim().slice(0,8);
+  try{ localStorage.setItem('komorebi_name',profName); }catch(_){ }
+});
+$('titlePick').addEventListener('click',e=>{
+  const row=e.target.closest('[data-tt]');
+  if(!row) return;
+  profTitle=row.getAttribute('data-tt')||'';
+  try{ localStorage.setItem('komorebi_title',profTitle); }catch(_){ }
+  renderTitlePick();
+  updateTitleUi();
+  $('achMine').textContent='現在の称号：'+currentTitle();
 });
 $('btnAchBack').addEventListener('click',()=>{ $('ovAch').hidden=true; });
 $('tsumeList').addEventListener('click',e=>{
@@ -3500,7 +3588,7 @@ function tsumeStart(i){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog(); throwLog=[]; shareKey=null; gamePita=0;
+  clearLog(); throwLog=[]; shareKey=null; scoreTrail=[]; gamePita=0; gameGripSet=new Set(); gameArcSet=new Set(); gameAllPerfect=true; gameAllMulti=true;
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach(); renderBoard(); resize();
   requestAnimationFrame(()=>{
@@ -3606,16 +3694,21 @@ async function dailyFinish(){
     if(meta) meta.textContent+='｜きょうの一本・練習（公式記録は本日分すみ）';
   }
 }
+function trailLine(){
+  let seq=[0].concat(scoreTrail.map(e=>e.s));
+  if(seq.length>14) seq=seq.slice(0,2).concat(['…'],seq.slice(-9));
+  return seq.join('→');
+}
 function computeShareParts(){
   if(tsume){
     const head=state==='win'
       ? players[0].throws+'投で正解！（規定'+tsume.stage.par+'投）'
       : 'しっぱい…';
-    return {tag:'つめモルック・第'+(tsume.idx+1)+'問 '+tsume.stage.title, head, scoreLines:[], line:throwLog.slice(-24).join('')};
+    return {tag:'つめモルック・第'+(tsume.idx+1)+'問 '+tsume.stage.title, head, scoreLines:[], line:throwLog.slice(-24).join(''), trail:scoreTrail.slice()};
   }
   if(dailyMode&&!Net.active&&players.length===1){
     const head=state==='win'?players[0].throws+'投でクリア！':'3連続ミスでしっかく…';
-    return {tag:'きょうの一本・'+dailyDateLabel(), head, scoreLines:[], line:throwLog.slice(-24).join('')};
+    return {tag:'きょうの一本・'+dailyDateLabel(), head, scoreLines:[], line:throwLog.slice(-24).join(''), trail:scoreTrail.slice()};
   }
   const modeTxt=Net.active?'通信対戦':(players.some(p=>p.cpu)?'CPU対戦':(players.length>1?'みんなで対戦':'ひとりで'));
   const tag=[modeTxt,diffLabel(),opts.court==='short'?'コンパクト':''].filter(Boolean).join('・');
@@ -3637,15 +3730,16 @@ function computeShareParts(){
     ? players.map(p=>p.name+'　'+p.score+'点'+(p.out?'（失格）':''))
     : [];
   const line=throwLog.slice(-24).join('');
-  return {tag,head,scoreLines,line};
+  return {tag,head,scoreLines,line, trail:players.length===1?scoreTrail.slice():null};
 }
 function buildShareText(key){
   const p=computeShareParts();
   const url=location.origin+location.pathname+(key?'?v='+key:'');
   const score=p.scoreLines.length?p.scoreLines.join(' ／ ')+'\n':'';
+  const tl=(p.trail&&p.trail.length)?('スコア '+trailLine()+'\n'):'';
   const tt=currentTitle();
   const ttl=(tt&&tt!=='かけだし')?'称号：'+tt+'\n':'';
-  return 'こもれびモルック（'+p.tag+'）\n'+p.head+'\n'+score+(p.line?p.line+'\n':'')+ttl+url;
+  return 'こもれびモルック（'+p.tag+'）\n'+p.head+'\n'+score+(p.line?p.line+'\n':'')+tl+ttl+url;
 }
 async function saveResult(){
   try{
@@ -3658,6 +3752,7 @@ async function saveResult(){
       tag:parts.tag, head:parts.head,
       sc:players.map(p2=>({n:p2.name, s:p2.score, o:p2.out?1:0})),
       log:throwLog.slice(-30).join(''),
+      tr:scoreTrail.slice(0,30).map(e=>(e.s|0)+'.'+(e.k|0)).join('>'),
       w:state==='win'?1:0
     });
     return ref.key;
@@ -3705,12 +3800,40 @@ function makeShareImage(parts){
       for(const ln of parts.scoreLines.slice(0,4)){
         x.fillText(ln,W/2,yy); yy+=52;
       }
-      const arr=Array.from(parts.line||'');
+      const earr=Array.from(parts.line||'');
       x.font='400 54px sans-serif';
       yy+=28;
-      for(let i=0;i<arr.length&&yy<py0+ph-30;i+=12){
-        x.fillText(arr.slice(i,i+12).join(''),W/2,yy);
+      const emLimit=(parts.trail&&parts.trail.length)?py0+ph-280:py0+ph-30;
+      for(let i=0;i<earr.length&&yy<emLimit;i+=12){
+        x.fillText(earr.slice(i,i+12).join(''),W/2,yy);
         yy+=72;
+      }
+      if(parts.trail&&parts.trail.length){
+        const seq=[0].concat(parts.trail.map(e=>e.s));
+        const gx0=px0+95, gx1=px0+pw-95, gy0=py0+ph-60, gy1=py0+ph-235;
+        x.strokeStyle='rgba(255,255,255,0.55)'; x.lineWidth=3;
+        x.beginPath(); x.moveTo(gx0,gy0); x.lineTo(gx1,gy0); x.stroke();
+        x.setLineDash([10,10]);
+        x.beginPath(); x.moveTo(gx0,gy1); x.lineTo(gx1,gy1); x.stroke();
+        x.setLineDash([]);
+        x.fillStyle='rgba(255,255,255,0.9)';
+        x.font='700 26px "Zen Maru Gothic",sans-serif';
+        x.textAlign='left';
+        x.fillText('50',gx1+12,gy1+9);
+        x.textAlign='center';
+        const n2=seq.length;
+        const gpx=i2=>gx0+(gx1-gx0)*(n2<=1?0:i2/(n2-1));
+        const gpy=v2=>gy0-(gy0-gy1)*Math.min(50,Math.max(0,v2))/50;
+        x.strokeStyle='#ffe9a6'; x.lineWidth=6; x.lineJoin='round';
+        x.beginPath();
+        seq.forEach((v2,i2)=>{ i2?x.lineTo(gpx(i2),gpy(v2)):x.moveTo(gpx(i2),gpy(v2)); });
+        x.stroke();
+        x.fillStyle='#ffd23f';
+        seq.forEach((v2,i2)=>{
+          x.beginPath();
+          x.arc(gpx(i2),gpy(v2),i2===n2-1?11:6.5,0,6.2832);
+          x.fill();
+        });
       }
       x.fillStyle='#98866f'; x.font='700 34px "Zen Maru Gothic",sans-serif';
       x.fillText(parts.date||'',W/2,900);
@@ -3871,6 +3994,12 @@ async function showVerify(key){
     $('vfHead').textContent=v.head||'';
     $('vfScore').innerHTML=(v.sc||[]).map(e=>'<div class="fr"><span>'+esc(e&&e.n)+((e&&e.o)?'（失格）':'')+'</span><b>'+((e&&e.s)|0)+'点</b></div>').join('');
     $('vfLog').textContent=v.log||'';
+    if(v.tr){
+      const es=String(v.tr).split('>').map(t2=>t2.split('.'));
+      $('vfTrail').innerHTML='スコア 0→'+es.map(e=>e[0]).join('→')+'<br>倒した本数 '+es.map(e=>e[1]||'0').join('→');
+    }else{
+      $('vfTrail').textContent='';
+    }
     $('ovVerify').hidden=false;
   }catch(_){ }
 }
