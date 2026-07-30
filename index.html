@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#f8f3e6">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="モルック練習場">
 <title>MÖLKKY 練習場</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,7 +35,7 @@ body{
 }
 #wrap{
   display:flex; gap:16px; align-items:flex-start; justify-content:center;
-  width:100%; max-width:1010px; padding:8px 10px 20px;
+  width:100%; max-width:1010px; padding:8px 10px calc(20px + env(safe-area-inset-bottom));
 }
 #app{flex:0 1 540px; min-width:0; display:flex; flex-direction:column; gap:7px;}
 #side{
@@ -261,6 +266,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 }
 .card .seg{max-width:none; width:100%;}
 .card .seg button{background:#fff; padding:8px 4px; font-size:12.5px;}
+#segCpu button{font-size:10.5px; padding:8px 1px; letter-spacing:0;}
 .card .seg button.sel{background:var(--red); color:#fff;}
 #nameBox{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
 .nameIn{
@@ -303,6 +309,12 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 }
 .finals .fr span{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .finals .fr b{font-family:var(--fh); font-weight:400; font-size:17px; color:var(--ink); flex:none;}
+#netCodeBig{font-family:var(--fh); font-size:44px; letter-spacing:.28em; text-align:center; color:var(--red); margin:4px 0 10px; padding-left:.28em; min-height:52px;}
+.joinrow{display:flex; gap:8px; align-items:stretch;}
+.joinrow .nameIn{flex:1; text-transform:uppercase; letter-spacing:.2em; text-align:center; font-size:16px;}
+.joinrow .subbtn{margin-top:0; width:auto; flex:none; padding:10px 16px;}
+.bigbtn:disabled{background:#c9c0ae; box-shadow:none; cursor:default; transform:none;}
+#netRoster{margin:2px 0 8px;}
 @media (prefers-reduced-motion: reduce){
   *{transition:none !important; animation:none !important;}
 }
@@ -398,6 +410,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
       </ol>
       <p>矢印スタート後は、画面のどこをタップしても反応します。ボタンまでポインタを戻す必要はありません。</p>
       <p>ねらいのガイド線は手前数mで薄れて消えます。実物と同じで、その先の延長線はイメージで狙ってください。やさしいほどガイドが長く伸びます。</p>
+      <p>通信対戦は、部屋を作った人が4文字のコードを相手に伝え、相手がそのコードで入室すると2人で遊べます。部屋主が先攻で、コートと難易度は部屋主の設定が使われます。再戦の合図も部屋主が出します。</p>
       <p>振り子の振り幅は、いちばん遠いピンの少し先まで自動で伸び縮みします。ピンが奥に流れるほど振り幅が広がってマーカーが速くなり、さらに飛距離が伸びるほど着地位置のばらつきも大きくなります。実物と同じで、8mを超える遠投は狙いどおりに落とすだけでも難しくなります。近い距離はゆっくりで合わせやすいままです。</p>
       <h3>弾道と投げ技（実際の技術に対応）</h3>
       <table class="tec">
@@ -427,7 +440,18 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
     <div><span class="optlabel">対戦形式</span></div>
     <div class="seg" id="segMode">
       <button class="hand" data-v="solo">個人戦</button>
-      <button class="hand2" data-v="team">チーム戦（2チーム）</button>
+      <button class="hand2" data-v="cpu">CPU対戦</button>
+      <button class="hand" data-v="team">チーム戦</button>
+    </div>
+    <div id="rowCpu" style="display:none">
+      <div><span class="optlabel">CPUの強さ</span></div>
+      <div class="seg" id="segCpu">
+        <button class="hand" data-v="vweak">めちゃよわ</button>
+        <button class="hand2" data-v="weak">よわい</button>
+        <button class="hand" data-v="normal">ふつう</button>
+        <button class="hand2" data-v="strong">つよい</button>
+        <button class="hand" data-v="vstrong">めちゃつよ</button>
+      </div>
     </div>
     <div id="rowSolo">
       <div><span class="optlabel">人数</span></div>
@@ -469,6 +493,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
       <button class="hand2" data-v="hard">むずかしい</button>
     </div>
     <button class="bigbtn" id="btnStart">ゲームスタート</button>
+    <button class="subbtn" id="btnNet">通信対戦（部屋コードで2人）</button>
   </div>
 </div>
 
@@ -484,6 +509,32 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
   </div>
 </div>
 
+<div class="ov" id="ovNet" hidden>
+  <div class="card">
+    <h2><b>通信対戦</b>部屋コードで2人</h2>
+    <p class="lead" id="netStatus"></p>
+    <div id="netEntry">
+      <div><span class="optlabel">なまえ</span></div>
+      <input class="nameIn" id="netName" maxlength="8" placeholder="8文字まで">
+      <button class="bigbtn" id="btnMakeRoom">部屋を作る（先攻）</button>
+      <div><span class="optlabel">とどいたコードで入る</span></div>
+      <div class="joinrow">
+        <input class="nameIn" id="netCodeIn" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false">
+        <button class="subbtn" id="btnJoinRoom">入室する</button>
+      </div>
+    </div>
+    <div id="netWait" style="display:none">
+      <div id="netCodeBig" class="hand"></div>
+      <div class="finals" id="netRoster"></div>
+      <button class="bigbtn" id="btnNetStart" style="display:none" disabled>相手の入室待ち…</button>
+    </div>
+    <button class="subbtn" id="btnNetBack">もどる</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script>
 'use strict';
 /* ================= 基本定数 ================= */
@@ -514,6 +565,13 @@ const DIFF={
   normal:{range:11*DEG, tv:2.1, period:2.1, scat:1.0,  pita:0.8,  guide:3.2},
   hard:  {range:14*DEG, tv:2.5, period:1.7, scat:1.35, pita:0.55, guide:2.4}
 };
+const CPU_LV={
+  vweak:  {ang:3.6*DEG,  dist:0.13,  base:0.24,  pick:0.55, wait:1.6,  iq:0},
+  weak:   {ang:2.3*DEG,  dist:0.085, base:0.16,  pick:0.35, wait:1.4,  iq:1},
+  normal: {ang:1.2*DEG,  dist:0.045, base:0.085, pick:0.12, wait:1.15, iq:2},
+  strong: {ang:0.55*DEG, dist:0.022, base:0.045, pick:0.03, wait:0.95, iq:3},
+  vstrong:{ang:0.22*DEG, dist:0.010, base:0.018, pick:0,    wait:0.8,  iq:4}
+};
 const ARC={
   low: {h:0.5,  dur:0.82, v:1.35},
   mid: {h:1.0,  dur:1.0,  v:1.0},
@@ -538,10 +596,10 @@ let celebT=0, celebPower=0;
 let forest=[], fireflies=[];
 let state='setup';
 let settleT=0, totalThrows=0, goldPin=0, tGlobal=0, pendingNext=0;
-let opts={n:1, mode:'solo', diff:'normal', arc:'mid', grip:'yoko', court:'long'};
+let opts={n:1, mode:'solo', cpu:'normal', diff:'normal', arc:'mid', grip:'yoko', court:'long'};
 let namesCache=['','','',''];
 let teamCache=[['','',''],['','','']];
-let baseAng=Math.PI/2, aiming=false;
+let baseAng=Math.PI/2, aiming=false, cpuPlan=null;
 let swT=0, swDir=1, dirLocked=Math.PI/2, pita=false;
 let pendT=0, pendS=-1, pendFwd=false, backFlash=0, phaseT=0;
 let throwTop=5.9, throwValid=5.0, lastDist=-1;
@@ -576,6 +634,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
   return Math.sqrt(-2*Math.log(u))*Math.cos(6.2831853*v);}
+function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function rotv(x,y,a){const c=Math.cos(a),s=Math.sin(a);return [x*c-y*s,x*s+y*c];}
 function closestOnSeg(ax,ay,bx,by,px,py){
   const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1e-9;
@@ -745,6 +804,245 @@ const Snd={
   }
 };
 
+/* ================= 通信対戦 ================= */
+const NETCFG={
+  apiKey:"AIzaSyAIsjiB3NbONRcuBjgIVvuKqUyfFKMruy8",
+  authDomain:"molkky-93c99.firebaseapp.com",
+  databaseURL:"https://molkky-93c99-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"molkky-93c99",
+  storageBucket:"molkky-93c99.firebasestorage.app",
+  messagingSenderId:"108714827882",
+  appId:"1:108714827882:web:6e724ff57f74962b696a13"
+};
+const Net={
+  ready:false, uid:null, code:null, seat:-1, active:false, started:false,
+  rdSeen:0, roster:{}, hooks:{}, offs:[],
+  pendingIn:null, pendingOut:null, expIn:-1, expOut:-1,
+  ok(){ return typeof firebase!=='undefined'&&!!firebase.initializeApp; },
+  async boot(){
+    if(this.ready) return true;
+    if(!this.ok()) return 'sdk';
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(NETCFG);
+      const c=await firebase.auth().signInAnonymously();
+      this.uid=c.user.uid; this.ready=true; return true;
+    }catch(e){
+      return (e&&e.code==='auth/operation-not-allowed')?'anon':'net';
+    }
+  },
+  db(path){ return firebase.database().ref(path); },
+  listen(ref,ev,cb){ ref.on(ev,cb); this.offs.push([ref,ev,cb]); },
+  offAll(){
+    for(const [r,e,c] of this.offs){ try{ r.off(e,c); }catch(_){ } }
+    this.offs=[]; this.hooks={};
+  },
+  genCode(){
+    const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let out='';
+    for(let i=0;i<4;i++) out+=A[(Math.random()*A.length)|0];
+    return out;
+  },
+  async create(name){
+    for(let t=0;t<6;t++){
+      const c=this.genCode(), ref=this.db('rooms/'+c);
+      const snap=await ref.once('value');
+      if(snap.exists()) continue;
+      await ref.set({
+        ca:firebase.database.ServerValue.TIMESTAMP,
+        st:'lobby', host:this.uid, rd:0,
+        op:{court:opts.court, diff:opts.diff},
+        p:{[this.uid]:{nm:name, seat:0}}
+      });
+      this.code=c; this.seat=0; this.started=false; this.rdSeen=0;
+      ref.child('p/'+this.uid).onDisconnect().remove();
+      this.attach();
+      return c;
+    }
+    throw new Error('busy');
+  },
+  async join(code,name){
+    const ref=this.db('rooms/'+code);
+    const snap=await ref.once('value');
+    if(!snap.exists()) throw new Error('nf');
+    const v=snap.val();
+    if(v.st!=='lobby') throw new Error('started');
+    const cnt=v.p?Object.keys(v.p).length:0;
+    if(cnt>=2&&!(v.p&&v.p[this.uid])) throw new Error('full');
+    await ref.child('p/'+this.uid).set({nm:name, seat:1});
+    this.code=code; this.seat=1; this.started=false; this.rdSeen=v.rd|0;
+    ref.child('p/'+this.uid).onDisconnect().remove();
+    this.attach();
+  },
+  attach(){
+    const r=this.db('rooms/'+this.code);
+    this.listen(r.child('p'),'value',sn=>netOnRoster(sn.val()||{}));
+    this.listen(r.child('st'),'value',sn=>netOnSt(sn.val()));
+    this.listen(r.child('rd'),'value',sn=>netOnRound(sn.val()||0));
+  },
+  hookThrow(idx){
+    const key=this.rdSeen+'_'+idx;
+    if(this.hooks[key]) return;
+    this.hooks[key]=1;
+    const ref=this.db('rooms/'+this.code+'/t/'+key);
+    this.listen(ref,'value',sn=>{
+      const v=sn.val(); if(!v) return;
+      if(v.i&&this.expIn===idx){ this.expIn=-1; netDeliverIn(idx,v.i); }
+      if(v.o&&this.expOut===idx){ this.expOut=-1; netDeliverOut(idx,v.o); }
+    });
+  },
+  expectIn(idx){ this.expIn=idx; this.hookThrow(idx); },
+  expectOut(){ const idx=totalThrows-1; this.expOut=idx; this.hookThrow(idx); },
+  pushIn(idx,v){ try{ this.db('rooms/'+this.code+'/t/'+this.rdSeen+'_'+idx+'/i').set(v); }catch(_){ } },
+  pushOut(o){ const idx=totalThrows-1; try{ this.db('rooms/'+this.code+'/t/'+this.rdSeen+'_'+idx+'/o').set(o); }catch(_){ } },
+  startMatch(){
+    this.db('rooms/'+this.code).update({st:'playing', op:{court:opts.court, diff:opts.diff}});
+  },
+  leave(){
+    const wasHost=this.seat===0, code=this.code, started=this.started;
+    this.offAll();
+    if(code&&this.ready){
+      try{
+        this.db('rooms/'+code+'/p/'+this.uid).remove();
+        if(wasHost&&!started) this.db('rooms/'+code).remove();
+      }catch(_){ }
+    }
+    this.code=null; this.seat=-1; this.active=false; this.started=false;
+    this.pendingIn=null; this.pendingOut=null; this.expIn=-1; this.expOut=-1;
+    this.rdSeen=0; this.roster={};
+  }
+};
+function netStatus(t){ const el=$('netStatus'); if(el) el.textContent=t||''; }
+function netPanelMode(m){
+  $('netEntry').style.display = m==='entry'?'':'none';
+  $('netWait').style.display  = m==='entry'?'none':'';
+  $('btnNetStart').style.display = m==='hosting'?'':'none';
+}
+function openNetPanel(){ $('ovNet').hidden=false; netPanelMode('entry'); }
+function renderNetRoster(){
+  const box=$('netRoster'); if(!box) return;
+  const arr=Object.values(Net.roster).sort((a,b)=>(a.seat|0)-(b.seat|0));
+  box.innerHTML=arr.map((v,i)=>
+    '<div class="fr"><span>'+(i===0?'部屋主 ':'挑戦者 ')+esc((v.nm||'').slice(0,8))+'</span><b>'+(i===0?'先攻':'後攻')+'</b></div>'
+  ).join('')||'<div class="fr"><span>参加者なし</span><b></b></div>';
+}
+function netOnRoster(pv){
+  Net.roster=pv||{};
+  const cnt=Object.keys(Net.roster).length;
+  renderNetRoster();
+  if(Net.started){
+    if(cnt<2) netOpponentLeft();
+  }else{
+    if(Net.seat===1&&cnt===0){ netFail('部屋が閉じられました'); return; }
+    if(Net.seat===0){
+      const b=$('btnNetStart');
+      b.disabled=cnt<2;
+      b.textContent=cnt<2?'相手の入室待ち…':'対戦を開始する';
+    }
+  }
+}
+function netOnSt(v){
+  if(v==='playing'&&!Net.started&&Net.code){
+    Net.started=true;
+    Net.db('rooms/'+Net.code+'/op').once('value').then(sn=>{
+      const op=sn.val()||{};
+      if(op.court&&COURTS[op.court]) opts.court=op.court;
+      if(op.diff&&DIFF[op.diff]) opts.diff=op.diff;
+      segInit($('segC'),'v',opts.court);
+      segInit($('segD'),'v',opts.diff);
+      Net.active=true;
+      $('ovNet').hidden=true;
+      $('ovStart').hidden=true;
+      netNewGame();
+    });
+  }
+}
+function netOnRound(rd){
+  rd=rd|0;
+  if(!Net.started){ Net.rdSeen=rd; return; }
+  if(rd!==Net.rdSeen){
+    Net.rdSeen=rd;
+    Net.pendingIn=null; Net.pendingOut=null; Net.expIn=-1; Net.expOut=-1;
+    $('ovEnd').hidden=true;
+    netNewGame();
+  }
+}
+function netFail(t){
+  Net.leave();
+  netPanelMode('entry');
+  netStatus(t);
+}
+function netOpponentLeft(){
+  Net.leave();
+  goHome();
+  openNetPanel();
+  netStatus('相手が退出しました');
+}
+function netNewGame(){
+  if(!Net.active) return;
+  const arr=Object.entries(Net.roster)
+    .map(([uid,v])=>({uid, nm:((v&&v.nm)||'').trim()||'プレイヤー', seat:(v&&v.seat)|0}))
+    .sort((a,b)=>a.seat-b.seat);
+  if(arr.length<2){ setTimeout(netNewGame,150); return; }
+  C=COURTS[opts.court];
+  players=arr.map((e,i)=>({
+    name:e.nm.slice(0,8), members:[e.nm.slice(0,8)], mIdx:0, team:false,
+    net:e.uid!==Net.uid,
+    score:0, miss:0, out:false, throws:0, col:PCOL[i], hex:PCOLHEX[i]
+  }));
+  resetPins(); makeForest();
+  particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
+  rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; celebT=0; celebPower=0;
+  shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
+  clearLog();
+  $('ovStart').hidden=true; $('ovEnd').hidden=true;
+  computeReach();
+  renderBoard();
+  resize();
+  requestAnimationFrame(()=>{
+    measureBand();
+    const t=camTargets(); scale=t.sc; camY=t.cy;
+    enterAimDir(true);
+  });
+}
+function netDeliverIn(idx,v){
+  if(!Net.active||!v) return;
+  if(state==='aimDir'&&players[cur]&&players[cur].net&&idx===totalThrows){
+    const pa=opts.arc, pg=opts.grip;
+    if(ARC[v.a]) opts.arc=v.a;
+    if(GRIP[v.g]) opts.grip=v.g;
+    doThrow(+v.tx||0, +v.ty||4);
+    opts.arc=pa; opts.grip=pg;
+  }else{
+    Net.pendingIn={idx,v};
+  }
+}
+function netDeliverOut(idx,o){
+  if(!Net.active||!o) return;
+  if(state==='netwait'&&idx===totalThrows-1){ applyOutcome(o); }
+  else{ Net.pendingOut={idx,o}; }
+}
+function localSettle(){
+  if(Net.active){
+    const pl=players[cur];
+    if(pl&&pl.net){
+      if(Net.pendingOut&&Net.pendingOut.idx===totalThrows-1){
+        const o=Net.pendingOut.o; Net.pendingOut=null;
+        applyOutcome(o);
+      }else{
+        state='netwait';
+        msg('結果を同期中…');
+        Net.expectOut();
+      }
+    }else{
+      const o=computeOutcome();
+      Net.pushOut(o);
+      applyOutcome(o);
+    }
+  }else{
+    applyOutcome(computeOutcome());
+  }
+}
+
 /* ================= カメラとサイズ ================= */
 function viewTopNeed(){
   let vt=6.4;
@@ -826,6 +1124,14 @@ function makeSides(){
       return {name:TEAM_NAMES[i], members:ms, mIdx:0, team:true,
         score:0, miss:0, out:false, throws:0, col:PCOL[i], hex:PCOLHEX[i]};
     });
+  }else if(opts.mode==='cpu'){
+    const lvName={vweak:'めちゃよわCPU',weak:'よわいCPU',normal:'ふつうCPU',strong:'つよいCPU',vstrong:'めちゃつよCPU'}[opts.cpu];
+    players=[
+      {name:'あなた', members:['あなた'], mIdx:0, team:false,
+       score:0, miss:0, out:false, throws:0, col:PCOL[0], hex:PCOLHEX[0]},
+      {name:lvName, members:[lvName], mIdx:0, team:false, cpu:true,
+       score:0, miss:0, out:false, throws:0, col:PCOL[1], hex:PCOLHEX[1]}
+    ];
   }else{
     players=Array.from({length:opts.n},(_,i)=>{
       const nm=opts.n===1?'あなた':((namesCache[i]&&namesCache[i].trim())||'プレイヤー'+(i+1));
@@ -849,6 +1155,7 @@ function renderNames(){
 }
 function renderModeUI(){
   $('rowSolo').style.display = opts.mode==='solo'?'':'none';
+  $('rowCpu').style.display  = opts.mode==='cpu'?'':'none';
   $('teamBox').style.display = opts.mode==='team'?'':'none';
   if(opts.mode==='solo') renderNames();
 }
@@ -858,6 +1165,7 @@ cv.addEventListener('pointerdown',e=>{
   Snd.init();
   if(state==='result'){ action(); return; }
   if(state==='aimDir'){
+    if(players[cur]&&(players[cur].cpu||players[cur].net)) return;
     aiming=true;
     cv.setPointerCapture(e.pointerId);
     setAngFrom(e);
@@ -885,11 +1193,13 @@ btnBack.addEventListener('click',()=>{
 window.addEventListener('keydown',e=>{
   if(!$('ovStart').hidden||!$('ovEnd').hidden) return;
   if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); Snd.init(); action(); }
-  else if(e.code==='ArrowLeft'&&state==='aimDir'){ baseAng=clamp(baseAng+0.02,ANG_MIN+cfg().range,ANG_MAX-cfg().range); }
-  else if(e.code==='ArrowRight'&&state==='aimDir'){ baseAng=clamp(baseAng-0.02,ANG_MIN+cfg().range,ANG_MAX-cfg().range); }
+  else if(e.code==='ArrowLeft'&&state==='aimDir'&&!(players[cur]&&(players[cur].cpu||players[cur].net))){ baseAng=clamp(baseAng+0.02,ANG_MIN+cfg().range,ANG_MAX-cfg().range); }
+  else if(e.code==='ArrowRight'&&state==='aimDir'&&!(players[cur]&&(players[cur].cpu||players[cur].net))){ baseAng=clamp(baseAng-0.02,ANG_MIN+cfg().range,ANG_MAX-cfg().range); }
 });
 
 function action(){
+  const ap=players[cur];
+  if(ap&&(ap.cpu||ap.net)&&state!=='result') return;
   const now=performance.now();
   if(now-lockT<230) return;
   if(state==='aimDir'){ lockT=now; Snd.tick(); enterSweep(); }
@@ -929,6 +1239,78 @@ function enterAimDir(withTurnMsg){
   }
   hint();
   renderBoard();
+  if(pl.cpu){
+    btnGo.disabled=true; paintBtn(null);
+    btnBack.hidden=true;
+    setMode('thin');
+    msg(pl.name+'の番。狙いを定めています…');
+    elHint.textContent='';
+    cpuPlan=cpuThink();
+  }else if(pl.net){
+    btnGo.disabled=true; paintBtn(null);
+    btnBack.hidden=true;
+    setMode('thin');
+    msg(pl.name+'の番。投球を待っています…');
+    elHint.textContent='';
+    if(Net.pendingIn&&Net.pendingIn.idx===totalThrows){
+      const b=Net.pendingIn; Net.pendingIn=null;
+      setTimeout(()=>netDeliverIn(b.idx,b.v),30);
+    }else{
+      Net.expectIn(totalThrows);
+    }
+  }
+}
+function cpuThink(){
+  const pl=players[cur], need=50-pl.score, lv=CPU_LV[opts.cpu];
+  const stand=pins.filter(p=>p.state==='stand');
+  let aimX=0, aimY=4.3, arc='mid', grip='yoko', single=false, target=null;
+  const blunder=Math.random()<lv.pick;
+  if(need<=12 && !(lv.iq<=1 && Math.random()<lv.pick*0.5)){
+    target=stand.find(p=>p.n===need)||null;
+    if(target) single=true;
+  }
+  if(!target && stand.length){
+    let bc=stand[0], bcCnt=0, bcScore=-1e9;
+    for(const c of stand){
+      let cnt=0;
+      for(const q of stand){ if(Math.hypot(q.x-c.x,q.y-c.y)<0.3) cnt++; }
+      const s2=cnt*10-Math.hypot(c.x-LAUNCH.x,c.y-LAUNCH.y);
+      if(s2>bcScore){ bcScore=s2; bc=c; bcCnt=cnt; }
+    }
+    let bs=null;
+    if(lv.iq>=2){
+      const iso=lv.iq>=4?0.34:0.38;
+      for(const c of stand){
+        let nd=1e9;
+        for(const q of stand){ if(q!==c){ const dd=Math.hypot(q.x-c.x,q.y-c.y); if(dd<nd) nd=dd; } }
+        if(nd>iso && (!bs||c.n>bs.n)) bs=c;
+      }
+    }
+    let useSingle=false;
+    if(bs){
+      if(lv.iq>=3) useSingle=bs.n>=bcCnt;
+      else useSingle=bs.n>=8 && Math.random()<0.55;
+    }
+    if(blunder){ target=stand[(Math.random()*stand.length)|0]; single=false; }
+    else if(useSingle){ target=bs; single=true; }
+    else { target=bc; single=false; }
+  }
+  if(target){ aimX=target.x; aimY=target.y; }
+  if(single){
+    if(lv.iq>=2){ arc='high'; grip='back'; }
+  }else if(lv.iq>=1){ arc='low'; grip='yoko'; }
+  const d0=Math.hypot(aimX-LAUNCH.x,aimY-LAUNCH.y)||0.1;
+  const ux=(aimX-LAUNCH.x)/d0, uy=(aimY-LAUNCH.y)/d0;
+  const v0=baseSpeed(d0)*ARC[arc].v;
+  const sl=v0*v0/(2*STICK_DECEL*GRIP[grip].dec);
+  const gx2=aimX-ux*sl*0.5, gy2=aimY-uy*sl*0.5;
+  const trueAng=Math.atan2(gy2-LAUNCH.y,gx2-LAUNCH.x);
+  const ang=trueAng+gauss()*lv.ang;
+  let D=Math.hypot(gx2-LAUNCH.x,gy2-LAUNCH.y);
+  D=clamp(D+gauss()*(lv.base+lv.dist*D),0.8,throwTop-0.05);
+  const tx=clamp(LAUNCH.x+Math.cos(ang)*D,-(C.W/2-0.08),C.W/2-0.08);
+  const ty=clamp(LAUNCH.y+Math.sin(ang)*D,1.0,C.H-0.12);
+  return {tx,ty,ang:clamp(trueAng,ANG_MIN,ANG_MAX),t:0.8+lv.wait*(0.7+Math.random()*0.6),arc,grip};
 }
 function enterSweep(){
   state='sweep';
@@ -977,6 +1359,9 @@ function fireThrow(){
 }
 function doThrow(tx,ty){
   const pl=players[cur];
+  if(Net.active&&!pl.cpu&&!pl.net){
+    Net.pushIn(totalThrows,{tx:+tx.toFixed(3), ty:+ty.toFixed(3), a:opts.arc, g:opts.grip});
+  }
   pl.throws++; totalThrows++;
   const am=arcCfg(), gm=gripCfg(), grip=opts.grip;
   const dx=tx-LAUNCH.x, dy=ty-LAUNCH.y, d=Math.hypot(dx,dy)||0.01;
@@ -1163,11 +1548,28 @@ function detectLean(){
   }
   return leanNums;
 }
-function scoreThrow(){
-  const pl=players[cur];
+function computeOutcome(){
   const leans=detectLean();
-  const leanNote=leans.length?'。'+leans.join('・')+'は寄りかかりでノーカウント':'';
   relax();
+  return {
+    ln:leans,
+    ko:knockedOrder.slice(),
+    p:pins.map(q=>({n:q.n, x:+q.x.toFixed(3), y:+q.y.toFixed(3), s:q.state==='stand'?1:0, l:+(q.lie||0).toFixed(3)}))
+  };
+}
+function applyOutcome(o){
+  knockedOrder=(o.ko||[]).slice();
+  for(const rec of (o.p||[])){
+    const q=pins.find(pp=>pp.n===rec.n); if(!q) continue;
+    q.x=rec.x; q.y=rec.y; q.vx=0; q.vy=0;
+    q.state=rec.s?'stand':'down';
+    q.lie=rec.l||0;
+    q.knocked=knockedOrder.includes(rec.n);
+    if(rec.s) q.stand=1;
+  }
+  const pl=players[cur];
+  const leans=o.ln||[];
+  const leanNote=leans.length?'。'+leans.join('・')+'は寄りかかりでノーカウント':'';
   const ks=pins.filter(p=>p.knocked);
   let cx=0, cy=0;
   ks.forEach(p=>{cx+=p.x; cy+=p.y;});
@@ -1251,13 +1653,21 @@ function scoreThrow(){
   const np=players[pendingNext];
   state='result';
   setMode('full');
-  btnGo.disabled=false;
-  btnGo.textContent=(players.length>1||np.team)
-    ? 'NEXT ▶ '+sideLabel(np)
-    : 'NEXT ▶ '+(np.throws+1)+'投目';
-  paintBtn(np.hex);
   btnBack.hidden=true;
-  elHint.textContent='NEXTでピンを立て直して次の投球へ。弾道と投げ技もここで変更';
+  if(Net.active){
+    btnGo.disabled=true;
+    btnGo.textContent='次は '+sideLabel(np);
+    paintBtn(np.hex);
+    elHint.textContent='';
+    setTimeout(()=>{ if(state==='result') advanceTurn(); },1900);
+  }else{
+    btnGo.disabled=false;
+    btnGo.textContent=(players.length>1||np.team)
+      ? 'NEXT ▶ '+sideLabel(np)
+      : 'NEXT ▶ '+(np.throws+1)+'投目';
+    paintBtn(np.hex);
+    elHint.textContent='NEXTでピンを立て直して次の投球へ。弾道と投げ技もここで変更';
+  }
 }
 function advanceTurn(){
   let i=0;
@@ -1314,9 +1724,16 @@ function fillFinals(){
   players.forEach(p=>{
     const d=document.createElement('div'); d.className='fr';
     const nm=p.team? p.name+'（'+p.members.join('・')+'）' : p.name;
-    d.innerHTML='<span>'+nm+(p.out?'【失格】':'')+'</span><b>'+p.score+'点 / '+p.throws+'投</b>';
+    d.innerHTML='<span>'+esc(nm)+(p.out?'【失格】':'')+'</span><b>'+p.score+'点 / '+p.throws+'投</b>';
     list.appendChild(d);
   });
+  const ba=$('btnAgain');
+  if(Net.active){
+    if(Net.seat===0){ ba.disabled=false; ba.textContent='再戦する（同じ部屋）'; }
+    else{ ba.disabled=true; ba.textContent='部屋主の再戦待ち…'; }
+  }else{
+    ba.disabled=false; ba.textContent='同じ設定でもう一度';
+  }
 }
 
 /* ================= 表示（DOM） ================= */
@@ -1325,7 +1742,7 @@ function renderBoard(){
   elBoard.innerHTML='';
   const soloUi=players.length===1&&!players[0].team;
   elBoard.classList.toggle('solo',soloUi);
-  const playing=['aimDir','sweep','pendulum','fly','roll','result','ending'].includes(state);
+  const playing=['aimDir','sweep','pendulum','fly','roll','netwait','result','ending'].includes(state);
   players.forEach((p,i)=>{
     const d=document.createElement('div');
     d.className='pl '+(i%2?'hand2':'hand')+(soloUi?' solo':'')+(i===cur&&!p.out&&playing?' active':'')
@@ -1335,10 +1752,10 @@ function renderBoard(){
     const rm=(players.length===1&&!p.team)?'あと'+(50-p.score)+'点・'+p.throws+'投':'あと'+(50-p.score);
     const bump=prevScores[i]!==undefined&&prevScores[i]!==p.score?' bump':'';
     d.innerHTML=
-      '<div class="nm"><span class="dot"></span>'+p.name+'</div>'
+      '<div class="nm"><span class="dot"></span>'+esc(p.name)+'</div>'
       +'<div class="sc'+bump+'">'+p.score+'</div>'
       +'<div class="rm">'+rm+'</div>'
-      +(p.team?'<div class="tw">投げ手 '+throwerOf(p)+'</div>':'')
+      +(p.team?'<div class="tw">投げ手 '+esc(throwerOf(p))+'</div>':'')
       +'<div class="ms">'+[0,1,2].map(k=>'<i class="'+(k<p.miss?'on':'')+'"></i>').join('')+'</div>'
       +(p.out?'<div class="tag">失格</div>':(state==='win'&&p.score===50?'<div class="tag">勝ち</div>':''));
     elBoard.appendChild(d);
@@ -1359,7 +1776,7 @@ function addLog(pl,text){
   if(logEntries.length>10) logEntries.pop();
   elLog.innerHTML=logEntries.map(e=>
     '<div class="li"><span class="dot" style="background:'+e.hex+'"></span><span>'
-    +(players.length>1||opts.mode==='team'?e.name+'：':'')+e.text+'</span></div>'
+    +(players.length>1||opts.mode==='team'?esc(e.name)+'：':'')+e.text+'</span></div>'
   ).join('');
 }
 function clearLog(){
@@ -1434,6 +1851,17 @@ function celebrate(power){
 /* ================= 更新 ================= */
 function step(dt){
   tGlobal+=dt;
+  if(cpuPlan&&state==='aimDir'){
+    baseAng+=(cpuPlan.ang-baseAng)*Math.min(1,dt*5);
+    cpuPlan.t-=dt;
+    if(cpuPlan.t<=0){
+      const cp2=cpuPlan; cpuPlan=null;
+      const pa=opts.arc, pg=opts.grip;
+      opts.arc=cp2.arc; opts.grip=cp2.grip;
+      doThrow(cp2.tx,cp2.ty);
+      opts.arc=pa; opts.grip=pg;
+    }
+  }
   const t=camTargets();
   scale+=(t.sc-scale)*Math.min(1,dt*3.5);
   camY+=(t.cy-camY)*Math.min(1,dt*3.5);
@@ -1535,7 +1963,7 @@ function step(dt){
     const moving=pins.some(p=>p.state==='move');
     if(sSpd<0.05 && !moving){
       settleT+=dt;
-      if(settleT>0.45) scoreThrow();
+      if(settleT>0.45) localSettle();
     }else settleT=0;
   }
 }
@@ -2064,7 +2492,7 @@ function newGame(){
   makeForest();
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; celebT=0; celebPower=0;
-  shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1;
+  shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
   clearLog();
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach();
@@ -2078,7 +2506,7 @@ function newGame(){
 }
 function goHome(){
   $('ovEnd').hidden=true; $('ovStart').hidden=false; state='setup';
-  celebT=0; fxQueue=[];
+  celebT=0; fxQueue=[]; cpuPlan=null;
   setMode('full');
   btnGo.disabled=true; paintBtn(null); btnGo.textContent='スタートしてください';
   btnBack.hidden=true;
@@ -2102,12 +2530,14 @@ function segInit(el,attr,val){
 }
 seg($('segMode'),'v',v=>{opts.mode=v; renderModeUI();});
 seg($('segN'),'n',v=>{opts.n=parseInt(v,10); renderNames();});
+seg($('segCpu'),'v',v=>{opts.cpu=v;});
 seg($('segD'),'v',v=>{opts.diff=v;});
 seg($('segC'),'v',v=>{opts.court=v;});
 seg($('segArc'),'v',v=>{opts.arc=v; Snd.init();});
 seg($('segGrip'),'v',v=>{opts.grip=v; Snd.init();});
 segInit($('segMode'),'v','solo');
 segInit($('segN'),'n',1);
+segInit($('segCpu'),'v','normal');
 segInit($('segD'),'v','normal');
 segInit($('segC'),'v','long');
 segInit($('segArc'),'v','mid');
@@ -2118,8 +2548,15 @@ document.querySelectorAll('.tin').forEach(inp=>{
   });
 });
 $('btnStart').addEventListener('click',()=>{Snd.init(); newGame();});
-$('btnAgain').addEventListener('click',()=>{Snd.init(); newGame();});
-$('btnToSetup').addEventListener('click',goHome);
+$('btnAgain').addEventListener('click',()=>{
+  Snd.init();
+  if(Net.active){
+    if(Net.seat===0&&Net.code){ Net.db('rooms/'+Net.code).update({rd:(Net.rdSeen|0)+1}); }
+    return;
+  }
+  newGame();
+});
+$('btnToSetup').addEventListener('click',()=>{ if(Net.active) Net.leave(); goHome(); });
 $('btnRules').addEventListener('click',()=>{
   $('side').scrollIntoView({behavior:'smooth'});
 });
@@ -2130,6 +2567,7 @@ $('btnSnd').addEventListener('click',()=>{
 let reArm=0;
 $('btnRe').addEventListener('click',()=>{
   if(state==='setup') return;
+  if(Net.active){ msg('通信対戦中はやり直しできません。退出はHOMEの2度押しで','warn'); return; }
   const now=performance.now();
   if(players.length===1 || now-reArm<2500){
     $('btnRe').textContent='↺'; newGame();
@@ -2146,12 +2584,71 @@ $('btnHome').addEventListener('click',()=>{
   const now=performance.now();
   if(!inGame || players.length===1 || now-homeArm<2500){
     $('btnHome').textContent='HOME';
+    if(Net.active) Net.leave();
     goHome();
   }else{
     homeArm=now;
     $('btnHome').textContent='もう一度でHOME';
     setTimeout(()=>{$('btnHome').textContent='HOME';},2500);
   }
+});
+function netMyName(){
+  return ((($('netName').value)||'').trim()||'プレイヤー').slice(0,8);
+}
+$('btnNet').addEventListener('click',async()=>{
+  Snd.init();
+  openNetPanel();
+  netStatus('接続中…');
+  const ok=await Net.boot();
+  if(ok!==true){
+    netStatus(ok==='anon'
+      ? 'Firebase側で匿名ログインが未有効です。Authenticationのログイン方法で匿名をオンにしてください'
+      : 'インターネット接続を確認してください');
+    return;
+  }
+  netStatus('部屋を作るか、コードで入室してください');
+});
+$('btnNetBack').addEventListener('click',()=>{
+  Net.leave();
+  $('ovNet').hidden=true;
+  netPanelMode('entry');
+  netStatus('');
+});
+$('btnMakeRoom').addEventListener('click',async()=>{
+  if(!Net.ready){ netStatus('接続できていません。開き直してください'); return; }
+  if(Net.code) return;
+  try{
+    netStatus('部屋を作成中…');
+    const code=await Net.create(netMyName());
+    $('netCodeBig').textContent=code;
+    netPanelMode('hosting');
+    renderNetRoster();
+    netStatus('このコードを相手に伝えてください');
+  }catch(e){
+    netStatus('部屋を作れませんでした。少し待ってやり直してください');
+  }
+});
+$('btnJoinRoom').addEventListener('click',async()=>{
+  if(!Net.ready){ netStatus('接続できていません。開き直してください'); return; }
+  if(Net.code) return;
+  const code=(($('netCodeIn').value)||'').trim().toUpperCase();
+  if(code.length!==4){ netStatus('4文字のコードを入力してください'); return; }
+  try{
+    netStatus('入室中…');
+    await Net.join(code,netMyName());
+    $('netCodeBig').textContent=code;
+    netPanelMode('joined');
+    netStatus('部屋主の開始を待っています…');
+  }catch(e){
+    const m=e&&e.message;
+    netStatus(m==='nf'?'その部屋が見つかりません'
+      :m==='full'?'その部屋は満員です'
+      :m==='started'?'その部屋はすでに対戦中です'
+      :'入室できませんでした。通信環境を確認してください');
+  }
+});
+$('btnNetStart').addEventListener('click',()=>{
+  if(Net.seat===0&&Net.code) Net.startMatch();
 });
 window.addEventListener('resize',resize);
 if(window.visualViewport) window.visualViewport.addEventListener('resize',resize);
@@ -2172,6 +2669,9 @@ resize();
 requestAnimationFrame(()=>{ measureBand(); const t=camTargets(); scale=t.sc; camY=t.cy; });
 msg('形式と難易度を選んでスタート');
 requestAnimationFrame(loop);
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
+}
 </script>
 </body>
 </html>
