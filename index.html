@@ -10,6 +10,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="こもモル">
 <title>こもれびモルック</title>
+<meta property="og:title" content="こもれびモルック">
+<meta property="og:description" content="木漏れ日の森で遊ぶ、ほんものルールのモルック。50点ぴったりを狙え。CPU戦も部屋コードの通信対戦も。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://kh11-web.github.io/icon-512.png">
+<meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -269,6 +274,9 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 }
 .card .seg{max-width:none; width:100%;}
 .card .seg button{background:#fff; padding:8px 4px; font-size:12.5px;}
+#segCpu{grid-auto-flow:row; grid-template-columns:repeat(4,1fr);}
+#pickBlue.sel{background:var(--p1); border-color:var(--p1);}
+#pickOrange.sel{background:var(--p2); border-color:var(--p2);}
 #segCpu button{font-size:10.5px; padding:8px 1px; letter-spacing:0;}
 .card .seg button.sel{background:var(--red); color:#fff;}
 #nameBox{display:grid; grid-template-columns:1fr 1fr; gap:6px;}
@@ -320,6 +328,9 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 .joinrow .subbtn{margin-top:0; width:auto; flex:none; padding:10px 16px;}
 .bigbtn:disabled{background:#c9c0ae; box-shadow:none; cursor:default; transform:none;}
 #netRoster{margin:2px 0 8px;}
+.card.toss{max-width:280px; text-align:center; padding:22px 18px;}
+.tosscap{font-size:13px; color:var(--sub); font-weight:700; margin-bottom:6px;}
+#tossName{font-family:var(--fh); font-size:34px; min-height:46px; letter-spacing:.04em;}
 @media (prefers-reduced-motion: reduce){
   *{transition:none !important; animation:none !important;}
 }
@@ -415,7 +426,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
       </ol>
       <p>矢印スタート後は、画面のどこをタップしても反応します。ボタンまでポインタを戻す必要はありません。</p>
       <p>ねらいのガイド線は手前数mで薄れて消えます。実物と同じで、その先の延長線はイメージで狙ってください。やさしいほどガイドが長く伸びます。</p>
-      <p>通信対戦は、部屋を作った人が4文字のコードを伝え、最大4人まで入室できます。部屋主は人数がそろったところで個人戦として開始でき、4人ちょうどのときは2対2のチーム戦も選べます。組分けは入室順に青2人、オレンジ2人。投げる順は入室順で、コートと難易度は部屋主の設定が使われます。途中で回線が切れた人は失格あつかいになり、残りのメンバーで続行します。再戦の合図は部屋主が出します。</p>
+      <p>通信対戦は、部屋を作った人が4文字のコードを伝え、最大4人まで入室できます。部屋主は人数がそろったところで個人戦として開始でき、4人ちょうどのときは2対2のチーム戦も選べます。チーム分けはロビーで各自が青かオレンジを選べます。選んでいない人は人数が合うよう自動で振り分けます。投げる順は入室順のまま、だれから始めるかは実物の公式戦と同じ抽選方式で、ルーレットが決めます。コートと難易度は部屋主の設定が使われます。途中で回線が切れた人は失格あつかいになり、残りのメンバーで続行します。再戦の合図は部屋主が出します。</p>
       <p>振り子の振り幅は、いちばん遠いピンの少し先まで自動で伸び縮みします。ピンが奥に流れるほど振り幅が広がってマーカーが速くなり、さらに飛距離が伸びるほど着地位置のばらつきも大きくなります。実物と同じで、8mを超える遠投は狙いどおりに落とすだけでも難しくなります。近い距離はゆっくりで合わせやすいままです。</p>
       <h3>弾道と投げ技（実際の技術に対応）</h3>
       <table class="tec">
@@ -456,6 +467,9 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
         <button class="hand" data-v="normal">ふつう</button>
         <button class="hand2" data-v="strong">つよい</button>
         <button class="hand" data-v="vstrong">めちゃつよ</button>
+        <button class="hand2" data-v="oni">おに</button>
+        <button class="hand" data-v="kami">かみ</button>
+        <button class="hand2" data-v="nushi">もりのぬし</button>
       </div>
     </div>
     <div id="rowSolo">
@@ -508,7 +522,9 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
     <div class="trophy" id="endEmoji">🏆</div>
     <h2 id="endTitle"></h2>
     <p id="endSub"></p>
+    <p class="lead" id="endMeta" style="margin:0 0 10px"></p>
     <div class="finals" id="endList"></div>
+    <button class="subbtn" id="btnShare">けっかをシェア</button>
     <button class="bigbtn" id="btnAgain">同じ設定でもう一度</button>
     <button class="subbtn" id="btnToSetup">HOMEに戻る（形式や難易度を変える）</button>
   </div>
@@ -521,7 +537,7 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
     <div id="netEntry">
       <div><span class="optlabel">なまえ</span></div>
       <input class="nameIn" id="netName" maxlength="8" placeholder="8文字まで">
-      <button class="bigbtn" id="btnMakeRoom">部屋を作る（先攻）</button>
+      <button class="bigbtn" id="btnMakeRoom">部屋を作る</button>
       <div><span class="optlabel">とどいたコードで入る</span></div>
       <div class="joinrow">
         <input class="nameIn" id="netCodeIn" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false">
@@ -530,12 +546,27 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
     </div>
     <div id="netWait" style="display:none">
       <div id="netCodeBig" class="hand"></div>
+      <button class="subbtn" id="btnInvite" style="margin-top:0">さそいリンクをコピー</button>
       <div class="finals" id="netRoster"></div>
+      <div id="teamPick" style="display:none">
+        <div><span class="optlabel">じぶんのチーム（チーム戦のとき）</span></div>
+        <div class="seg">
+          <button class="hand" id="pickBlue">青チーム</button>
+          <button class="hand2" id="pickOrange">オレンジ</button>
+        </div>
+      </div>
       <button class="bigbtn" id="btnNetStart" style="display:none" disabled>相手の入室待ち…</button>
       <button class="bigbtn" id="btnNetStartTeam" style="display:none" disabled>チーム戦で開始（2対2）</button>
-      <p class="lead" id="netTeamNote" style="display:none">チーム戦の組分けは入室順に 青・青・オレンジ・オレンジ です</p>
+      <p class="lead" id="netTeamNote" style="display:none">チーム戦は各自が上でチームを選べます。選んでいない人は人数が合うよう自動で振り分けます</p>
     </div>
     <button class="subbtn" id="btnNetBack">もどる</button>
+  </div>
+</div>
+
+<div class="ov" id="ovToss" hidden>
+  <div class="card toss">
+    <div class="tosscap" id="tossCap">せんこうは…</div>
+    <div id="tossName" class="hand">？？？</div>
   </div>
 </div>
 
@@ -577,7 +608,10 @@ const CPU_LV={
   weak:   {ang:2.3*DEG,  dist:0.085, base:0.16,  pick:0.35, wait:1.4,  iq:1},
   normal: {ang:1.2*DEG,  dist:0.045, base:0.085, pick:0.12, wait:1.15, iq:2},
   strong: {ang:0.55*DEG, dist:0.022, base:0.045, pick:0.03, wait:0.95, iq:3},
-  vstrong:{ang:0.22*DEG, dist:0.010, base:0.018, pick:0,    wait:0.8,  iq:4}
+  vstrong:{ang:0.22*DEG, dist:0.010, base:0.018, pick:0,    wait:0.8,  iq:4, iso:0.34},
+  oni:    {ang:0.12*DEG, dist:0.007, base:0.012, pick:0,    wait:0.7,  iq:4, iso:0.30},
+  kami:   {ang:0.07*DEG, dist:0.005, base:0.009, pick:0,    wait:0.6,  iq:4, iso:0.28},
+  nushi:  {ang:0.03*DEG, dist:0.003, base:0.005, pick:0,    wait:0.5,  iq:4, iso:0.26}
 };
 const ARC={
   low: {h:0.5,  dur:0.82, v:1.35},
@@ -615,6 +649,7 @@ let punchT=0, punchD=0.3, punchX=0, punchY=0, punchZ=1;
 let glow={life:0,max:0.5,col:'255,210,63',a:0};
 let ilines=[], pillars=[];
 let logEntries=[];
+let throwLog=[];
 let scale=90, camY=-1.6, bandH=180, cw=340, ch=550, dpr=1;
 
 /* ================= DOM ================= */
@@ -671,6 +706,8 @@ function curIsRemote(){
 }
 let lastThrowerUid=null;
 const sideLabel=p=>p.team ? p.name+'・'+throwerOf(p) : p.name;
+const diffLabel=()=>({easy:'やさしい',normal:'ふつう',hard:'むずかしい'}[opts.diff]||opts.diff);
+const courtLabel=()=>opts.court==='short'?'コンパクトコート':'公式コート';
 function paintBtn(hex){
   if(hex){ btnGo.style.background=hex; }
   else{ btnGo.style.background=''; }
@@ -868,7 +905,7 @@ const NETCFG={
 };
 const Net={
   ready:false, uid:null, code:null, isHost:false, active:false, started:false,
-  rdSeen:0, roster:{}, hooks:{}, offs:[], mode:'kojin', ord:[], dropped:{},
+  rdSeen:0, roster:{}, hooks:{}, offs:[], mode:'kojin', ord:[], dropped:{}, fo:0, tord:[],
   pendingIn:null, pendingOut:null, expIn:-1, expOut:-1,
   ok(){ return typeof firebase!=='undefined'&&!!firebase.initializeApp; },
   async boot(){
@@ -955,11 +992,31 @@ const Net={
       .sort((a,b)=>a.ja-b.ja)
       .map(e=>e.uid);
   },
+  teamOrd(){
+    const arr=Object.entries(this.roster)
+      .map(([uid,v])=>({uid, ja:(v&&v.ja)||0, tm:(v&&(v.tm===0||v.tm===1))?v.tm:-1}))
+      .sort((a,b)=>a.ja-b.ja);
+    const blue=[], orange=[], rest=[];
+    for(const e of arr){
+      if(e.tm===0&&blue.length<2) blue.push(e.uid);
+      else if(e.tm===1&&orange.length<2) orange.push(e.uid);
+      else rest.push(e.uid);
+    }
+    for(const uid of rest){
+      if(blue.length<2&&(blue.length<=orange.length||orange.length>=2)) blue.push(uid);
+      else if(orange.length<2) orange.push(uid);
+      else blue.push(uid);
+    }
+    return blue.concat(orange);
+  },
   startMatch(mode){
-    this.db('rooms/'+this.code).update({
+    const upd={
       st:'playing', mode:mode||'kojin', ord:this.rosterOrd(),
+      fo:(Math.random()*1000)|0,
       op:{court:opts.court, diff:opts.diff}
-    });
+    };
+    if(mode==='team') upd.tord=this.teamOrd();
+    this.db('rooms/'+this.code).update(upd);
   },
   leave(){
     const wasHost=this.isHost, code=this.code, started=this.started;
@@ -972,7 +1029,7 @@ const Net={
     }
     this.code=null; this.isHost=false; this.active=false; this.started=false;
     this.pendingIn=null; this.pendingOut=null; this.expIn=-1; this.expOut=-1;
-    this.rdSeen=0; this.roster={}; this.mode='kojin'; this.ord=[]; this.dropped={};
+    this.rdSeen=0; this.roster={}; this.mode='kojin'; this.ord=[]; this.dropped={}; this.fo=0; this.tord=[];
   }
 };
 function netStatus(t){ const el=$('netStatus'); if(el) el.textContent=t||''; }
@@ -995,13 +1052,14 @@ function openNetPanel(){ $('ovNet').hidden=false; netPanelMode('entry'); }
 function renderNetRoster(){
   const box=$('netRoster'); if(!box) return;
   const arr=Object.values(Net.roster).sort((a,b)=>((a&&a.ja)||0)-((b&&b.ja)||0));
-  const team4=arr.length===4;
-  box.innerHTML=arr.map((v,i)=>
-    '<div class="fr"><span>'+(i+1)+'番手'+(i===0?'（部屋主）':'')+' '+esc((v.nm||'').slice(0,8))+'</span><b>'
-    +(team4?['青','青','オレンジ','オレンジ'][i]:(i===0?'先攻':''))+'</b></div>'
-  ).join('')||'<div class="fr"><span>参加者なし</span><b></b></div>';
+  const showTeam=arr.length>=3;
+  box.innerHTML=arr.map((v,i)=>{
+    const tm=(v&&(v.tm===0||v.tm===1))?v.tm:-1;
+    const right=showTeam?(tm===0?'青':tm===1?'オレンジ':'未定'):'';
+    return '<div class="fr"><span>'+(i+1)+'. '+esc((v.nm||'').slice(0,8))+(i===0?'（部屋主）':'')+'</span><b>'+right+'</b></div>';
+  }).join('')||'<div class="fr"><span>参加者なし</span><b></b></div>';
   const note=$('netTeamNote');
-  if(note) note.style.display=team4?'':'none';
+  if(note) note.style.display=showTeam?'':'none';
 }
 function netOnRoster(pv){
   Net.roster=pv||{};
@@ -1025,6 +1083,12 @@ function netOnRoster(pv){
       bt.style.display=cnt===4?'':'none';
       bt.disabled=cnt!==4;
     }
+    const tp=$('teamPick');
+    if(tp) tp.style.display=(cnt>=3&&Net.code)?'':'none';
+    const mv=Net.roster[Net.uid];
+    const myTm=(mv&&(mv.tm===0||mv.tm===1))?mv.tm:-1;
+    $('pickBlue').classList.toggle('sel',myTm===0);
+    $('pickOrange').classList.toggle('sel',myTm===1);
   }
 }
 function netAmIFirstAlive(){
@@ -1088,6 +1152,7 @@ function netOnSt(v){
       const op=v.op||{};
       Net.mode=(v.mode==='team')?'team':'kojin';
       Net.ord=Array.isArray(v.ord)?v.ord.slice():(v.ord?Object.values(v.ord):[]);
+      Net.tord=Array.isArray(v.tord)?v.tord.slice():(v.tord?Object.values(v.tord):[]);
       if(op.court&&COURTS[op.court]) opts.court=op.court;
       if(op.diff&&DIFF[op.diff]) opts.diff=op.diff;
       segInit($('segC'),'v',opts.court);
@@ -1122,6 +1187,12 @@ function netOpponentLeft(){
   netStatus('相手が退出しました');
 }
 function netNewGame(){
+  if(!Net.active||!Net.code) return;
+  Net.db('rooms/'+Net.code+'/fo').once('value')
+    .then(sn=>{ Net.fo=sn.val()|0; netNewGameInner(); })
+    .catch(()=>{ Net.fo=0; netNewGameInner(); });
+}
+function netNewGameInner(){
   if(!Net.active) return;
   const ord=(Net.ord&&Net.ord.length)?Net.ord:Object.keys(Net.roster);
   const arr=[];
@@ -1130,13 +1201,22 @@ function netNewGame(){
     if(!v) continue;
     arr.push({uid, nm:(((v&&v.nm)||'').trim()||'プレイヤー').slice(0,8)});
   }
-  if(arr.length<2){ setTimeout(netNewGame,150); return; }
+  if(arr.length<2){ setTimeout(netNewGameInner,150); return; }
   C=COURTS[opts.court];
-  if(Net.mode==='team'&&arr.length>=4){
+  let tarr=null;
+  if(Net.mode==='team'){
+    const src=(Net.tord&&Net.tord.length===4)?Net.tord:ord;
+    tarr=[];
+    for(const uid of src){
+      const v=Net.roster[uid];
+      if(v) tarr.push({uid, nm:(((v&&v.nm)||'').trim()||'プレイヤー').slice(0,8)});
+    }
+  }
+  if(Net.mode==='team'&&tarr&&tarr.length>=4){
     players=[0,1].map(t=>({
       name:TEAM_NAMES[t], team:true,
-      uids:[arr[t*2].uid, arr[t*2+1].uid],
-      members:[arr[t*2].nm, arr[t*2+1].nm],
+      uids:[tarr[t*2].uid, tarr[t*2+1].uid],
+      members:[tarr[t*2].nm, tarr[t*2+1].nm],
       mIdx:0, score:0, miss:0, out:false, throws:0, col:PCOL[t], hex:PCOLHEX[t]
     }));
   }else{
@@ -1149,7 +1229,7 @@ function netNewGame(){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog();
+  clearLog(); throwLog=[];
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach();
   renderBoard();
@@ -1157,7 +1237,7 @@ function netNewGame(){
   requestAnimationFrame(()=>{
     measureBand();
     const t=camTargets(); scale=t.sc; camY=t.cy;
-    enterAimDir(true);
+    matchKickoff();
   });
 }
 function netDeliverIn(idx,v){
@@ -1283,13 +1363,12 @@ function makeSides(){
         score:0, miss:0, out:false, throws:0, col:PCOL[i], hex:PCOLHEX[i]};
     });
   }else if(opts.mode==='cpu'){
-    const lvName={vweak:'めちゃよわCPU',weak:'よわいCPU',normal:'ふつうCPU',strong:'つよいCPU',vstrong:'めちゃつよCPU'}[opts.cpu];
-    players=[
-      {name:'あなた', members:['あなた'], mIdx:0, team:false,
-       score:0, miss:0, out:false, throws:0, col:PCOL[0], hex:PCOLHEX[0]},
-      {name:lvName, members:[lvName], mIdx:0, team:false, cpu:true,
-       score:0, miss:0, out:false, throws:0, col:PCOL[1], hex:PCOLHEX[1]}
-    ];
+    const lvName={vweak:'めちゃよわCPU',weak:'よわいCPU',normal:'ふつうCPU',strong:'つよいCPU',vstrong:'めちゃつよCPU',oni:'おにCPU',kami:'かみCPU',nushi:'もりのぬし'}[opts.cpu];
+    const me={name:'あなた', members:['あなた'], mIdx:0, team:false,
+       score:0, miss:0, out:false, throws:0, col:PCOL[0], hex:PCOLHEX[0]};
+    const bot={name:lvName, members:[lvName], mIdx:0, team:false, cpu:true,
+       score:0, miss:0, out:false, throws:0, col:PCOL[1], hex:PCOLHEX[1]};
+    players=[me,bot];
   }else{
     players=Array.from({length:opts.n},(_,i)=>{
       const nm=opts.n===1?'あなた':((namesCache[i]&&namesCache[i].trim())||'プレイヤー'+(i+1));
@@ -1422,12 +1501,42 @@ function cpuThink(){
   const pl=players[cur], need=50-pl.score, lv=CPU_LV[opts.cpu];
   const stand=pins.filter(p=>p.state==='stand');
   let aimX=0, aimY=4.3, arc='mid', grip='yoko', single=false, target=null;
+  let latNN=false, passThrow=false;
   const blunder=Math.random()<lv.pick;
+  const near=(x,y,rad)=>stand.filter(q=>Math.hypot(q.x-x,q.y-y)<rad);
   if(need<=12 && !(lv.iq<=1 && Math.random()<lv.pick*0.5)){
-    target=stand.find(p=>p.n===need)||null;
-    if(target) single=true;
+    const t0=stand.find(p=>p.n===need)||null;
+    if(t0){
+      if(lv.iq<3){
+        target=t0; single=true;
+      }else{
+        const hiRisk=near(t0.x,t0.y,0.45).some(q=>q!==t0&&q.n>need);
+        const crowd=near(t0.x,t0.y,0.35).length;
+        if(!hiRisk&&crowd<=need){
+          target=t0; single=true;
+        }else{
+          let alt=null;
+          for(const q of stand){
+            if(q.n>need) continue;
+            if(near(q.x,q.y,0.45).some(z=>z!==q&&z.n>need)) continue;
+            if(near(q.x,q.y,0.35).length>need) continue;
+            if(!alt||q.n>alt.n) alt=q;
+          }
+          if(alt){ target=alt; single=true; }
+          else if(lv.iq>=4&&pl.miss<2){ passThrow=true; }
+          else { target=t0; single=true; }
+        }
+      }
+    }
   }
-  if(!target && stand.length){
+  if(passThrow){
+    const cands=[[-(C.CX-0.35),1.4],[C.CX-0.35,1.4],[-(C.CX-0.35),C.BACK-0.5],[C.CX-0.35,C.BACK-0.5],[0,1.15]];
+    aimX=cands[0][0]; aimY=cands[0][1];
+    for(const [qx,qy] of cands){
+      if(!stand.some(q=>Math.hypot(q.x-qx,q.y-qy)<0.5)){ aimX=qx; aimY=qy; break; }
+    }
+  }
+  if(!target && !passThrow && stand.length){
     let bc=stand[0], bcCnt=0, bcScore=-1e9;
     for(const c of stand){
       let cnt=0;
@@ -1437,7 +1546,7 @@ function cpuThink(){
     }
     let bs=null;
     if(lv.iq>=2){
-      const iso=lv.iq>=4?0.34:0.38;
+      const iso=lv.iso||(lv.iq>=4?0.34:0.38);
       for(const c of stand){
         let nd=1e9;
         for(const q of stand){ if(q!==c){ const dd=Math.hypot(q.x-c.x,q.y-c.y); if(dd<nd) nd=dd; } }
@@ -1454,9 +1563,34 @@ function cpuThink(){
     else { target=bc; single=false; }
   }
   if(target){ aimX=target.x; aimY=target.y; }
+  if(single&&target){
+    let nn=null, nd=1e9;
+    for(const q of stand){
+      if(q!==target){
+        const dd=Math.hypot(q.x-target.x,q.y-target.y);
+        if(dd<nd){ nd=dd; nn=q; }
+      }
+    }
+    if(nn&&nd<0.45){
+      const ax=target.x-nn.x, ay=target.y-nn.y, al=Math.hypot(ax,ay)||1;
+      aimX+=ax/al*0.045; aimY+=ay/al*0.045;
+      const ddx=target.x-LAUNCH.x, ddy=target.y-LAUNCH.y, dl2=Math.hypot(ddx,ddy)||1;
+      const along=Math.abs(ax*ddx+ay*ddy)/(al*dl2);
+      if(along<0.55) latNN=true;
+    }
+  }
+  if(!single&&target&&lv.iq>=3){
+    let sx2=0, sy2=0, n2=0;
+    for(const q of stand){
+      if(Math.hypot(q.x-target.x,q.y-target.y)<0.3){ sx2+=q.x; sy2+=q.y; n2++; }
+    }
+    if(n2>0){ aimX=sx2/n2; aimY=sy2/n2; }
+  }
   if(single){
     if(lv.iq>=2){ arc='high'; grip='back'; }
+    if(latNN&&lv.iq>=3){ grip='tate'; }
   }else if(lv.iq>=1){ arc='low'; grip='yoko'; }
+  if(passThrow){ arc='mid'; grip='yoko'; }
   const d0=Math.hypot(aimX-LAUNCH.x,aimY-LAUNCH.y)||0.1;
   const ux=(aimX-LAUNCH.x)/d0, uy=(aimY-LAUNCH.y)/d0;
   const v0=baseSpeed(d0)*ARC[arc].v;
@@ -1621,7 +1755,16 @@ function stepStick(h){
       const sv=Math.hypot(stick.vx,stick.vy);
       if(p.state==='stand'){
         if(sv>0.55){
-          knockPin(p,nx,ny,stick.vx,stick.vy,sv,0.78,0.55);
+          const cdeep=clamp(1-dd/rr,0,1);
+          knockPin(p,nx,ny,stick.vx,stick.vy,sv,0.78+0.3*cdeep,0.55+0.35*cdeep);
+          if(cdeep>0.35){
+            const side=(stick.vx*(p.y-stick.y)-stick.vy*(p.x-stick.x))>=0?1:-1;
+            const vl2=Math.hypot(stick.vx,stick.vy)||1;
+            const kx=-stick.vy/vl2*side, ky=stick.vx/vl2*side;
+            const kick=(0.6+1.4*cdeep)*Math.min(1,sv/3);
+            p.vx+=kx*kick; p.vy+=ky*kick;
+            p.lie=Math.atan2(p.vy,p.vx);
+          }
           stick.vx*=stick.keep; stick.vy*=stick.keep;
         }else{
           p.wob=0.6; stick.vx*=0.25; stick.vy*=0.25; Snd.knock(0.12,0);
@@ -1709,7 +1852,7 @@ function detectLean(){
     if(!lean && stick){
       const ex=Math.cos(stick.rot)*STICK_HALF, ey=Math.sin(stick.rot)*STICK_HALF;
       const cp=closestOnSeg(stick.x-ex,stick.y-ey,stick.x+ex,stick.y+ey,p.x,p.y);
-      if(Math.hypot(p.x-cp.x,p.y-cp.y)<0.105) lean=true;
+      if(Math.hypot(p.x-cp.x,p.y-cp.y)<0.085) lean=true;
     }
     if(lean){
       p.knocked=false; p.state='stand'; p.stand=0; p.wob=0.9; p.vx=0; p.vy=0;
@@ -1753,6 +1896,7 @@ function applyOutcome(o){
     pl.miss++;
     addStamp(pl.miss>=3?'しっかく…':'MISS…', pl.miss>=3?'#ff8a7a':'#9fb2c4');
     Snd.miss();
+    throwLog.push(pl.miss>=3?'❌':'⚪');
     if(pl.miss>=3){
       pl.out=true;
       Snd.bust();
@@ -1807,12 +1951,14 @@ function applyOutcome(o){
       addGlow('#e8836e',0.45,0.7);
       puff(cx,cy,16,'#b9b3a4');
       Snd.stamp(); Snd.bust();
+      throwLog.push('🌀');
       text='+'+pts+'点で'+ns+'点。50点を超えたので25点に戻ります'+leanNote; cls='warn';
       addLog(pl,'+'+pts+'で'+ns+'点 → 25点戻り');
     }else{
       pl.score=ns;
       addStamp(ns===50?'50!!':'+'+pts, (ns===50||pts>=8)?'#ffd23f':'#ffffff');
       spawnCollects(ks.slice(0,12));
+      throwLog.push(ns===50?'🏁':(ks.length>=5?'💥':(ks.length>=3?'✨':((ks.length===1&&ks[0].n>=7)?'🎯':'🟡'))));
       Snd.stamp();
       if(ks.length===1){
         text=ks[0].n+'番を単独で倒して +'+pts+'点（合計'+pl.score+'点）'+leanNote;
@@ -1931,6 +2077,7 @@ function fillFinals(){
     d.innerHTML='<span>'+esc(nm)+(p.out?'【失格】':'')+'</span><b>'+p.score+'点 / '+p.throws+'投</b>';
     list.appendChild(d);
   });
+  $('endMeta').textContent='難易度 '+diffLabel()+' ／ '+courtLabel();
   const ba=$('btnAgain');
   if(Net.active){
     if(Net.isHost){ ba.disabled=false; ba.textContent='再戦する（同じ部屋）'; }
@@ -2832,6 +2979,49 @@ function loop(ts){
 }
 
 /* ================= ゲーム進行 ================= */
+function matchKickoff(){
+  if(players.length<2){ enterAimDir(true); return; }
+  let fo;
+  if(Net.active) fo=(Net.fo|0)%players.length;
+  else if(opts.mode==='cpu'&&opts.cpu==='nushi') fo=Math.max(0,players.findIndex(p=>p.cpu));
+  else fo=Math.floor(Math.random()*players.length);
+  cur=fo;
+  state='toss';
+  setMode('thin');
+  btnGo.disabled=true; paintBtn(null); btnBack.hidden=true;
+  msg('先攻をルーレットで決めています…');
+  runToss(fo,()=>{ enterAimDir(true); });
+}
+function runToss(idx,done){
+  const ov=$('ovToss'), nmEl=$('tossName'), cap=$('tossCap');
+  ov.hidden=false;
+  cap.textContent='せんこうは…';
+  const n=players.length;
+  let i=Math.floor(Math.random()*n);
+  const base=10+Math.floor(Math.random()*n);
+  let steps=base+(((idx-i-base)%n)+n)%n;
+  let iv=70;
+  const tick=()=>{
+    if(state!=='toss'){ ov.hidden=true; return; }
+    nmEl.textContent=players[i%n].name;
+    nmEl.style.color=players[i%n].hex;
+    if(steps<=0){
+      Snd.cheer(true);
+      addFlash(0.25);
+      nmEl.textContent=players[idx].name+'！';
+      setTimeout(()=>{
+        ov.hidden=true;
+        if(state==='toss') done();
+      },1000);
+      return;
+    }
+    Snd.tick();
+    i++; steps--;
+    iv=Math.min(300,iv*1.13);
+    setTimeout(tick,iv);
+  };
+  tick();
+}
 function newGame(){
   C=COURTS[opts.court];
   makeSides();
@@ -2840,7 +3030,7 @@ function newGame(){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog();
+  clearLog(); throwLog=[];
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach();
   renderBoard();
@@ -2848,7 +3038,7 @@ function newGame(){
   requestAnimationFrame(()=>{
     measureBand();
     const t=camTargets(); scale=t.sc; camY=t.cy;
-    enterAimDir(true);
+    matchKickoff();
   });
 }
 function goHome(){
@@ -2895,10 +3085,47 @@ document.querySelectorAll('.tin').forEach(inp=>{
   });
 });
 $('btnStart').addEventListener('click',()=>{Snd.init(); newGame();});
+function buildShareText(){
+  const url=location.origin+location.pathname;
+  const modeTxt=Net.active?'通信対戦':(players.some(p=>p.cpu)?'CPU対戦':(players.length>1?'みんなで対戦':'ひとりで'));
+  const tag=[modeTxt,diffLabel(),opts.court==='short'?'コンパクト':''].filter(Boolean).join('・');
+  const w=players.find(p=>p.score===50)||players.filter(p=>!p.out)[0]||players[0];
+  let head;
+  if(state==='win'){
+    if(players.length===1){
+      head=w.throws+'投で50点ぴったり！';
+    }else if(players.some(p=>p.cpu)&&!Net.active){
+      const cpu=players.find(p=>p.cpu);
+      head=w.cpu ? cpu.name+'に敗北…' : cpu.name+'に勝利！（'+w.throws+'投）';
+    }else{
+      head=w.name+'の勝ち！（'+w.throws+'投）';
+    }
+  }else{
+    head=players.length===1?'3連続ミスでしっかく…':'全員しっかくで終了…';
+  }
+  const score=players.length>1
+    ? players.map(p=>p.name+' '+p.score+'点'+(p.out?'（失格）':'')).join(' ／ ')+'\n'
+    : '';
+  const line=throwLog.slice(-24).join('');
+  return 'こもれびモルック（'+tag+'）\n'+head+'\n'+score+(line?line+'\n':'')+url;
+}
+$('btnShare').addEventListener('click',async()=>{
+  Snd.init();
+  const t=buildShareText();
+  try{
+    if(navigator.share){
+      await navigator.share({text:t});
+    }else{
+      await navigator.clipboard.writeText(t);
+      $('btnShare').textContent='コピーしました！';
+      setTimeout(()=>{ $('btnShare').textContent='けっかをシェア'; },1800);
+    }
+  }catch(_){ }
+});
 $('btnAgain').addEventListener('click',()=>{
   Snd.init();
   if(Net.active){
-    if(Net.isHost&&Net.code){ Net.db('rooms/'+Net.code).update({rd:(Net.rdSeen|0)+1}); }
+    if(Net.isHost&&Net.code){ Net.db('rooms/'+Net.code).update({rd:(Net.rdSeen|0)+1, fo:(Math.random()*1000)|0}); }
     return;
   }
   newGame();
@@ -2997,6 +3224,24 @@ $('btnJoinRoom').addEventListener('click',async()=>{
       :netDbErr(e,'入室できませんでした。通信環境を確認してください'));
   }
 });
+$('btnInvite').addEventListener('click',async()=>{
+  if(!Net.code) return;
+  const u=location.origin+location.pathname+'?r='+Net.code;
+  try{
+    if(navigator.share){ await navigator.share({text:'こもれびモルックで対戦しよう！\n'+u}); }
+    else{
+      await navigator.clipboard.writeText(u);
+      $('btnInvite').textContent='コピーしました！';
+      setTimeout(()=>{ $('btnInvite').textContent='さそいリンクをコピー'; },1800);
+    }
+  }catch(_){ }
+});
+$('pickBlue').addEventListener('click',()=>{
+  if(Net.code&&!Net.started) Net.db('rooms/'+Net.code+'/p/'+Net.uid+'/tm').set(0);
+});
+$('pickOrange').addEventListener('click',()=>{
+  if(Net.code&&!Net.started) Net.db('rooms/'+Net.code+'/p/'+Net.uid+'/tm').set(1);
+});
 $('btnNetStart').addEventListener('click',()=>{
   if(Net.isHost&&Net.code) Net.startMatch('kojin');
 });
@@ -3021,6 +3266,15 @@ setMode('full');
 resize();
 requestAnimationFrame(()=>{ measureBand(); const t=camTargets(); scale=t.sc; camY=t.cy; });
 msg('形式と難易度を選んでスタート');
+try{
+  const rq=new URLSearchParams(location.search).get('r');
+  if(rq&&/^[A-Za-z0-9]{4}$/.test(rq)){
+    openNetPanel();
+    $('netCodeIn').value=rq.toUpperCase();
+    netStatus('さそいコードが入っています。なまえを入れて入室してください');
+    Net.boot().then(ok=>{ if(ok!==true) netStatus(netBootMsg(ok)); });
+  }
+}catch(_){ }
 requestAnimationFrame(loop);
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{ navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
