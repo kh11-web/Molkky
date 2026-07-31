@@ -716,7 +716,7 @@ let punchT=0, punchD=0.3, punchX=0, punchY=0, punchZ=1;
 let glow={life:0,max:0.5,col:'255,210,63',a:0};
 let ilines=[], pillars=[];
 let logEntries=[];
-let throwLog=[], shareKey=null, scoreTrail=[];
+let throwLog=[], throwWho=[], shareKey=null, scoreTrail=[];
 let dailyMode=false, dailyName='';
 let profName='', profTitle='';
 try{
@@ -1146,7 +1146,7 @@ const NETCFG={
 };
 const Net={
   ready:false, uid:null, code:null, isHost:false, active:false, started:false,
-  rdSeen:0, roster:{}, hooks:{}, offs:[], mode:'kojin', ord:[], dropped:{}, fo:0, tord:[],
+  rdSeen:0, roster:{}, hooks:{}, got:{}, offs:[], mode:'kojin', ord:[], dropped:{}, fo:0, tord:[],
   pendingIn:null, pendingOut:null, expIn:-1, expOut:-1,
   ok(){ return typeof firebase!=='undefined'&&!!firebase.initializeApp; },
   async boot(){
@@ -1167,7 +1167,7 @@ const Net={
   listen(ref,ev,cb){ ref.on(ev,cb); this.offs.push([ref,ev,cb]); },
   offAll(){
     for(const [r,e,c] of this.offs){ try{ r.off(e,c); }catch(_){ } }
-    this.offs=[]; this.hooks={};
+    this.offs=[]; this.hooks={}; this.got={};
   },
   genCode(){
     const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -1219,9 +1219,26 @@ const Net={
     const ref=this.db('rooms/'+this.code+'/t/'+key);
     this.listen(ref,'value',sn=>{
       const v=sn.val(); if(!v) return;
-      if(v.i&&this.expIn===idx){ this.expIn=-1; netDeliverIn(idx,v.i); }
-      if(v.o&&this.expOut===idx){ this.expOut=-1; netDeliverOut(idx,v.o); }
+      if(v.i&&!this.got[key+'i']){ this.got[key+'i']=1; this.expIn=-1; netDeliverIn(idx,v.i); }
+      if(v.o&&!this.got[key+'o']){ this.got[key+'o']=1; this.expOut=-1; netDeliverOut(idx,v.o); }
     });
+  },
+  pullOut(idx){
+    if(!this.code) return;
+    const key=this.rdSeen+'_'+idx;
+    const tryPull=n=>{
+      if(state!=='netwait'||!Net.active) return;
+      this.db('rooms/'+this.code+'/t/'+key+'/o').once('value').then(sn=>{
+        const o=sn.val();
+        if(o&&state==='netwait'&&totalThrows-1===idx){
+          this.got[key+'o']=1;
+          netDeliverOut(idx,o);
+        }else if(n<10){
+          setTimeout(()=>tryPull(n+1),900);
+        }
+      }).catch(()=>{ if(n<10) setTimeout(()=>tryPull(n+1),900); });
+    };
+    setTimeout(()=>tryPull(0),420);
   },
   expectIn(idx){ this.expIn=idx; this.hookThrow(idx); },
   expectOut(){ const idx=totalThrows-1; this.expOut=idx; this.hookThrow(idx); },
@@ -1269,7 +1286,7 @@ const Net={
       }catch(_){ }
     }
     this.code=null; this.isHost=false; this.active=false; this.started=false;
-    this.pendingIn=null; this.pendingOut=null; this.expIn=-1; this.expOut=-1;
+    this.pendingIn=null; this.pendingOut=null; this.expIn=-1; this.expOut=-1; this.got={};
     this.rdSeen=0; this.roster={}; this.mode='kojin'; this.ord=[]; this.dropped={}; this.fo=0; this.tord=[];
   }
 };
@@ -1471,7 +1488,7 @@ function netOnRound(rd){
   if(rd!==Net.rdSeen){
     Net.rdSeen=rd;
     Net.pendingIn=null; Net.pendingOut=null; Net.expIn=-1; Net.expOut=-1;
-    Net.dropped={};
+    Net.got={}; Net.hooks={}; Net.dropped={};
     $('ovEnd').hidden=true;
     netNewGame();
   }
@@ -1531,7 +1548,7 @@ function netNewGameInner(){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog(); throwLog=[]; shareKey=null; scoreTrail=[]; gamePita=0; gameGripSet=new Set(); gameArcSet=new Set(); gameAllPerfect=true; gameAllMulti=true;
+  clearLog(); throwLog=[]; throwWho=[]; shareKey=null; scoreTrail=[]; gamePita=0; gameGripSet=new Set(); gameArcSet=new Set(); gameAllPerfect=true; gameAllMulti=true;
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach();
   renderBoard();
@@ -1572,6 +1589,7 @@ function localSettle(){
       state='netwait';
       msg('結果を同期中…');
       Net.expectOut();
+      Net.pullOut(totalThrows-1);
       if(lastThrowerUid&&Net.dropped[lastThrowerUid]&&netAmIFirstAlive()){
         const o=computeOutcome();
         Net.pushOut(o);
@@ -2213,7 +2231,8 @@ function applyOutcome(o){
     addStamp((!tsume&&pl.miss>=3)?'しっかく…':'MISS…', (!tsume&&pl.miss>=3)?'#ff8a7a':'#9fb2c4');
     Snd.miss();
     throwLog.push((!tsume&&pl.miss>=3)?'❌':'⚪');
-    scoreTrail.push({s:pl.score,k:0});
+    throwWho.push(players.indexOf(pl));
+    scoreTrail.push({p:players.indexOf(pl),s:pl.score,k:0});
     if(!tsume&&pl.miss>=3){
       pl.out=true;
       Snd.bust();
@@ -2279,7 +2298,8 @@ function applyOutcome(o){
         addStamp('しっぱい…','#ff8a7a');
         Snd.bust();
         throwLog.push('🌀');
-        scoreTrail.push({s:ns,k:ks.length});
+        throwWho.push(players.indexOf(pl));
+        scoreTrail.push({p:players.indexOf(pl),s:ns,k:ks.length});
         pl.mIdx=(pl.mIdx+1)%pl.members.length;
         renderBoard();
         msg('+'+pts+'点で'+ns+'点。50点を超えたため失敗です','bad');
@@ -2293,7 +2313,8 @@ function applyOutcome(o){
       puff(cx,cy,16,'#b9b3a4');
       Snd.stamp(); Snd.bust();
       throwLog.push('🌀');
-      scoreTrail.push({s:25,k:ks.length});
+      throwWho.push(players.indexOf(pl));
+      scoreTrail.push({p:players.indexOf(pl),s:25,k:ks.length});
       text='+'+pts+'点で'+ns+'点。50点を超えたので25点に戻ります'+leanNote; cls='warn';
       addLog(pl,'+'+pts+'で'+ns+'点 → 25点戻り');
     }else{
@@ -2301,7 +2322,8 @@ function applyOutcome(o){
       addStamp(ns===50?'50!!':'+'+pts, (ns===50||pts>=8)?'#ffd23f':'#ffffff');
       spawnCollects(ks.slice(0,12));
       throwLog.push(ns===50?'🏁':(ks.length>=5?'💥':(ks.length>=3?'✨':((ks.length===1&&ks[0].n>=7)?'🎯':'🟡'))));
-      scoreTrail.push({s:ns,k:ks.length});
+      throwWho.push(players.indexOf(pl));
+      scoreTrail.push({p:players.indexOf(pl),s:ns,k:ks.length});
       Snd.stamp();
       if(ks.length===1){
         text=ks[0].n+'番を単独で倒して +'+pts+'点（合計'+pl.score+'点）'+leanNote;
@@ -2467,9 +2489,7 @@ function fillFinals(){
     ? 'つめモルック・規定'+tsume.stage.par+'投'
     : '難易度 '+diffLabel()+' ／ '+courtLabel();
   const tr=$('endTrail');
-  if(tr){
-    tr.textContent=(players.length===1&&scoreTrail.length)?('スコア '+trailLine()):'';
-  }
+  if(tr) tr.innerHTML=trailLines(true).map(esc).join('<br>');
   const bn=$('btnTsumeNext');
   if(bn) bn.hidden=!(tsume&&state==='win'&&tsumeStages[tsume.idx+1]);
   const ba=$('btnAgain');
@@ -3426,7 +3446,7 @@ function newGame(){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog(); throwLog=[]; shareKey=null; scoreTrail=[]; gamePita=0; gameGripSet=new Set(); gameArcSet=new Set(); gameAllPerfect=true; gameAllMulti=true;
+  clearLog(); throwLog=[]; throwWho=[]; shareKey=null; scoreTrail=[]; gamePita=0; gameGripSet=new Set(); gameArcSet=new Set(); gameAllPerfect=true; gameAllMulti=true;
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach();
   renderBoard();
@@ -3588,7 +3608,7 @@ function tsumeStart(i){
   particles=[]; floats=[]; stamps=[]; trail=[]; stick=null; cur=0; totalThrows=0; goldPin=0;
   rockets=[]; sparks=[]; confetti=[]; rings=[]; fxQueue=[]; collects=[]; ilines=[]; pillars=[]; celebT=0; celebPower=0;
   shake=0; slowT=0; hitstopT=0; flashT=0; prevScores=[]; lastDist=-1; cpuPlan=null;
-  clearLog(); throwLog=[]; shareKey=null; scoreTrail=[]; gamePita=0; gameGripSet=new Set(); gameArcSet=new Set(); gameAllPerfect=true; gameAllMulti=true;
+  clearLog(); throwLog=[]; throwWho=[]; shareKey=null; scoreTrail=[]; gamePita=0; gameGripSet=new Set(); gameArcSet=new Set(); gameAllPerfect=true; gameAllMulti=true;
   $('ovStart').hidden=true; $('ovEnd').hidden=true;
   computeReach(); renderBoard(); resize();
   requestAnimationFrame(()=>{
@@ -3694,21 +3714,49 @@ async function dailyFinish(){
     if(meta) meta.textContent+='｜きょうの一本・練習（公式記録は本日分すみ）';
   }
 }
-function trailLine(){
-  let seq=[0].concat(scoreTrail.map(e=>e.s));
-  if(seq.length>14) seq=seq.slice(0,2).concat(['…'],seq.slice(-9));
-  return seq.join('→');
+function seqShort(seq,keep){
+  const k=keep||9;
+  if(seq.length<=k+5) return seq.join('→');
+  return seq.slice(0,2).concat(['…'],seq.slice(-k)).join('→');
+}
+function buildTrails(){
+  return players.map((pl,i)=>({
+    name:pl.name, hex:pl.hex,
+    pts:scoreTrail.filter(e=>e.p===i).map(e=>e.s),
+    knocks:scoreTrail.filter(e=>e.p===i).map(e=>e.k),
+    emo:throwLog.filter((_,j)=>throwWho[j]===i).join('')
+  })).filter(t=>t.pts.length);
+}
+function myPlayerIdx(){
+  if(Net.active) return players.findIndex(p=>p.team?(p.uids&&p.uids.includes(Net.uid)):p.uid===Net.uid);
+  if(players.some(p=>p.cpu)) return players.findIndex(p=>!p.cpu);
+  return players.length===1?0:-1;
+}
+function trailLines(all){
+  const ts=buildTrails();
+  if(!ts.length) return [];
+  if(ts.length===1) return ['スコア 0→'+seqShort(ts[0].pts)];
+  let pick=ts;
+  if(!all){
+    const mi=myPlayerIdx();
+    const wi=players.indexOf(players.find(p=>p.score===50)||players.filter(p=>!p.out)[0]||players[0]);
+    const idx=[];
+    [mi,wi].forEach(k=>{ if(k>=0&&!idx.includes(k)) idx.push(k); });
+    if(idx.length<2) players.map((_,k)=>k).forEach(k=>{ if(idx.length<2&&!idx.includes(k)) idx.push(k); });
+    pick=idx.map(k=>ts[k]).filter(Boolean);
+  }
+  return pick.map(t=>t.name+' 0→'+seqShort(t.pts));
 }
 function computeShareParts(){
   if(tsume){
     const head=state==='win'
       ? players[0].throws+'投で正解！（規定'+tsume.stage.par+'投）'
       : 'しっぱい…';
-    return {tag:'つめモルック・第'+(tsume.idx+1)+'問 '+tsume.stage.title, head, scoreLines:[], line:throwLog.slice(-24).join(''), trail:scoreTrail.slice()};
+    return {tag:'つめモルック・第'+(tsume.idx+1)+'問 '+tsume.stage.title, head, scoreLines:[], line:throwLog.slice(-24).join(''), trails:buildTrails()};
   }
   if(dailyMode&&!Net.active&&players.length===1){
     const head=state==='win'?players[0].throws+'投でクリア！':'3連続ミスでしっかく…';
-    return {tag:'きょうの一本・'+dailyDateLabel(), head, scoreLines:[], line:throwLog.slice(-24).join(''), trail:scoreTrail.slice()};
+    return {tag:'きょうの一本・'+dailyDateLabel(), head, scoreLines:[], line:throwLog.slice(-24).join(''), trails:buildTrails()};
   }
   const modeTxt=Net.active?'通信対戦':(players.some(p=>p.cpu)?'CPU対戦':(players.length>1?'みんなで対戦':'ひとりで'));
   const tag=[modeTxt,diffLabel(),opts.court==='short'?'コンパクト':''].filter(Boolean).join('・');
@@ -3729,14 +3777,28 @@ function computeShareParts(){
   const scoreLines=players.length>1
     ? players.map(p=>p.name+'　'+p.score+'点'+(p.out?'（失格）':''))
     : [];
-  const line=throwLog.slice(-24).join('');
-  return {tag,head,scoreLines,line, trail:players.length===1?scoreTrail.slice():null};
+  const line=players.length===1?throwLog.slice(-24).join(''):'';
+  return {tag,head,scoreLines,line, trails:buildTrails(), multi:players.length>1};
 }
 function buildShareText(key){
   const p=computeShareParts();
   const url=location.origin+location.pathname+(key?'?v='+key:'');
   const score=p.scoreLines.length?p.scoreLines.join(' ／ ')+'\n':'';
-  const tl=(p.trail&&p.trail.length)?('スコア '+trailLine()+'\n'):'';
+  let tl='';
+  if(p.multi){
+    const ts=buildTrails();
+    const mi=myPlayerIdx();
+    const wi=players.indexOf(players.find(p2=>p2.score===50)||players.filter(p2=>!p2.out)[0]||players[0]);
+    const idx=[];
+    [mi,wi].forEach(k=>{ if(k>=0&&!idx.includes(k)) idx.push(k); });
+    players.forEach((_,k)=>{ if(idx.length<2&&!idx.includes(k)) idx.push(k); });
+    tl=idx.map(k=>ts[k]).filter(Boolean).map(t=>
+      t.name+' '+t.emo+'\n0→'+seqShort(t.pts)
+    ).join('\n')+'\n';
+  }else{
+    const t=buildTrails()[0];
+    if(t) tl='スコア 0→'+seqShort(t.pts)+'\n';
+  }
   const tt=currentTitle();
   const ttl=(tt&&tt!=='かけだし')?'称号：'+tt+'\n':'';
   return 'こもれびモルック（'+p.tag+'）\n'+p.head+'\n'+score+(p.line?p.line+'\n':'')+tl+ttl+url;
@@ -3752,7 +3814,10 @@ async function saveResult(){
       tag:parts.tag, head:parts.head,
       sc:players.map(p2=>({n:p2.name, s:p2.score, o:p2.out?1:0})),
       log:throwLog.slice(-30).join(''),
-      tr:scoreTrail.slice(0,30).map(e=>(e.s|0)+'.'+(e.k|0)).join('>'),
+      tr:parts.trails.map(t=>
+        String(t.name).replace(/[|>;]/g,'')+'|'+
+        t.pts.slice(0,30).map((v,i)=>(v|0)+'.'+(t.knocks[i]|0)).join('>')
+      ).join(';'),
       w:state==='win'?1:0
     });
     return ref.key;
@@ -3803,14 +3868,14 @@ function makeShareImage(parts){
       const earr=Array.from(parts.line||'');
       x.font='400 54px sans-serif';
       yy+=28;
-      const emLimit=(parts.trail&&parts.trail.length)?py0+ph-280:py0+ph-30;
+      const hasG=parts.trails&&parts.trails.length;
+      const emLimit=hasG?py0+ph-285:py0+ph-30;
       for(let i=0;i<earr.length&&yy<emLimit;i+=12){
         x.fillText(earr.slice(i,i+12).join(''),W/2,yy);
         yy+=72;
       }
-      if(parts.trail&&parts.trail.length){
-        const seq=[0].concat(parts.trail.map(e=>e.s));
-        const gx0=px0+95, gx1=px0+pw-95, gy0=py0+ph-60, gy1=py0+ph-235;
+      if(hasG){
+        const gx0=px0+95, gx1=px0+pw-120, gy0=py0+ph-60, gy1=py0+ph-235;
         x.strokeStyle='rgba(255,255,255,0.55)'; x.lineWidth=3;
         x.beginPath(); x.moveTo(gx0,gy0); x.lineTo(gx1,gy0); x.stroke();
         x.setLineDash([10,10]);
@@ -3819,21 +3884,35 @@ function makeShareImage(parts){
         x.fillStyle='rgba(255,255,255,0.9)';
         x.font='700 26px "Zen Maru Gothic",sans-serif';
         x.textAlign='left';
-        x.fillText('50',gx1+12,gy1+9);
-        x.textAlign='center';
-        const n2=seq.length;
-        const gpx=i2=>gx0+(gx1-gx0)*(n2<=1?0:i2/(n2-1));
+        x.fillText('50',gx1+14,gy1+9);
+        const gs=parts.trails.slice(0,4).map(t=>({
+          nm:t.name, hex:t.hex||'#ffe9a6', seq:[0].concat(t.pts)
+        }));
+        const maxN=Math.max.apply(null,gs.map(g=>g.seq.length));
+        const gpx=i2=>gx0+(gx1-gx0)*(maxN<=1?0:i2/(maxN-1));
         const gpy=v2=>gy0-(gy0-gy1)*Math.min(50,Math.max(0,v2))/50;
-        x.strokeStyle='#ffe9a6'; x.lineWidth=6; x.lineJoin='round';
-        x.beginPath();
-        seq.forEach((v2,i2)=>{ i2?x.lineTo(gpx(i2),gpy(v2)):x.moveTo(gpx(i2),gpy(v2)); });
-        x.stroke();
-        x.fillStyle='#ffd23f';
-        seq.forEach((v2,i2)=>{
+        gs.forEach(g=>{
+          x.strokeStyle=gs.length>1?g.hex:'#ffe9a6';
+          x.lineWidth=6; x.lineJoin='round';
           x.beginPath();
-          x.arc(gpx(i2),gpy(v2),i2===n2-1?11:6.5,0,6.2832);
-          x.fill();
+          g.seq.forEach((v2,i2)=>{ i2?x.lineTo(gpx(i2),gpy(v2)):x.moveTo(gpx(i2),gpy(v2)); });
+          x.stroke();
+          x.fillStyle=gs.length>1?g.hex:'#ffd23f';
+          g.seq.forEach((v2,i2)=>{
+            x.beginPath();
+            x.arc(gpx(i2),gpy(v2),i2===g.seq.length-1?11:6,0,6.2832);
+            x.fill();
+          });
+          if(gs.length>1){
+            const li=g.seq.length-1;
+            x.font='700 27px "Zen Maru Gothic",sans-serif';
+            x.textAlign='left';
+            x.strokeStyle='rgba(50,75,55,0.6)'; x.lineWidth=6;
+            x.strokeText(g.nm,gpx(li)+16,gpy(g.seq[li])+9);
+            x.fillText(g.nm,gpx(li)+16,gpy(g.seq[li])+9);
+          }
         });
+        x.textAlign='center';
       }
       x.fillStyle='#98866f'; x.font='700 34px "Zen Maru Gothic",sans-serif';
       x.fillText(parts.date||'',W/2,900);
@@ -3995,8 +4074,19 @@ async function showVerify(key){
     $('vfScore').innerHTML=(v.sc||[]).map(e=>'<div class="fr"><span>'+esc(e&&e.n)+((e&&e.o)?'（失格）':'')+'</span><b>'+((e&&e.s)|0)+'点</b></div>').join('');
     $('vfLog').textContent=v.log||'';
     if(v.tr){
-      const es=String(v.tr).split('>').map(t2=>t2.split('.'));
-      $('vfTrail').innerHTML='スコア 0→'+es.map(e=>e[0]).join('→')+'<br>倒した本数 '+es.map(e=>e[1]||'0').join('→');
+      const raw=String(v.tr);
+      if(raw.indexOf('|')>=0){
+        const segs=raw.split(';').filter(Boolean).map(sg=>{
+          const i2=sg.indexOf('|');
+          return {nm:sg.slice(0,i2), es:sg.slice(i2+1).split('>').filter(Boolean).map(t2=>t2.split('.'))};
+        });
+        let html=segs.map(sg=>esc(sg.nm)+' 0→'+sg.es.map(e=>e[0]).join('→')).join('<br>');
+        if(segs.length===1) html+='<br>倒した本数 '+segs[0].es.map(e=>e[1]||'0').join('→');
+        $('vfTrail').innerHTML=html;
+      }else{
+        const es=raw.split('>').map(t2=>t2.split('.'));
+        $('vfTrail').innerHTML='スコア 0→'+es.map(e=>e[0]).join('→')+'<br>倒した本数 '+es.map(e=>e[1]||'0').join('→');
+      }
     }else{
       $('vfTrail').textContent='';
     }

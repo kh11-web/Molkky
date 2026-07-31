@@ -1,4 +1,4 @@
-const V = 'molkky-v22';
+const V = 'molkky-v24';
 const CORE = ['./', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
